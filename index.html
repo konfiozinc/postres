@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- SEO básico -->
+  <title>Postres Snoopy — Postres con amor, hechos para consentirte</title>
+  <meta name="description" content="Fresas con crema y postres hechos al momento en Medellín. Pide por WhatsApp: fresas con crema, chocolate, caramelo, Nutella, Oreo y mango.">
+  <link rel="canonical" href="https://konfiozinc.github.io/postres/">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Postres Snoopy — Postres con amor">
+  <meta property="og:description" content="Fresas con crema y postres hechos al momento. Pide por WhatsApp.">
+  <meta property="og:image" content="https://konfiozinc.github.io/postres/assets/hero-poster.webp">
+  <meta property="og:url" content="https://konfiozinc.github.io/postres/">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <meta name="theme-color" content="#e63950">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍓</text></svg>">
+
+  <!-- Tipografías -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Datos estructurados: negocio local (los productos se inyectan desde data.json vía JS) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Postres Snoopy",
+    "description": "Postres y fresas con crema hechos al momento en Medellín.",
+    "telephone": "+573009981576",
+    "address": { "@type": "PostalAddress", "addressLocality": "Medellín", "addressCountry": "CO" },
+    "areaServed": "Medellín",
+    "url": "https://konfiozinc.github.io/postres/"
+  }
+  </script>
+</head>
+
+<body>
+  <main id="topo">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" id="inicio">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <video class="hero__video" id="heroVideo" autoplay muted loop playsinline webkit-playsinline preload="none" poster="assets/hero-poster.webp">
+        <source src="assets/hero.mp4" type="video/mp4">
+      </video>
+      <div class="hero__overlay" aria-hidden="true"></div>
+      <div class="hero__content">
+        <h1>Postres Snoopy</h1>
+        <p class="hero__slogan">Postres con amor, hechos para consentirte.</p>
+        <a class="btn btn--primary" href="#pedido">🍓 Haz tu pedido</a>
+      </div>
+    </section>
+
+    <!-- ===================== QUICK NAV (redes) ===================== -->
+    <nav class="quicknav" aria-label="Redes sociales">
+      <a class="quicknav__item" id="social-instagram" href="#" aria-label="Instagram">
+        <svg class="ico" aria-hidden="true"><use href="#i-instagram"></use></svg><span>Instagram</span>
+      </a>
+      <a class="quicknav__item" id="social-tiktok" href="#" aria-label="TikTok">
+        <svg class="ico" aria-hidden="true"><use href="#i-tiktok"></use></svg><span>TikTok</span>
+      </a>
+      <a class="quicknav__item" id="social-facebook" href="#" aria-label="Facebook">
+        <svg class="ico" aria-hidden="true"><use href="#i-facebook"></use></svg><span>Facebook</span>
+      </a>
+      <a class="quicknav__item" id="social-whatsapp" href="#" aria-label="WhatsApp">
+        <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>WhatsApp</span>
+      </a>
+    </nav>
+
+    <!-- ===================== GALERÍA DE PRODUCTOS ===================== -->
+    <section class="seccion" id="productos" aria-labelledby="t-productos">
+      <h2 id="t-productos">Nuestros postres</h2>
+      <p class="seccion__sub">Elige tu favorito y pídelo por WhatsApp.</p>
+      <div class="galeria" id="galeria" tabindex="0" aria-label="Carrusel de postres"></div>
+    </section>
+
+    <!-- ===================== SOBRE NOSOTROS ===================== -->
+    <section class="seccion" id="nosotros" aria-labelledby="t-nosotros">
+      <div class="card">
+        <h2 id="t-nosotros">Hechas con amor</h2>
+        <p>Preparamos cada postre al momento, con fresas frescas y crema suave. Cada vaso es un regalo dulce, pensado para consentirte.</p>
+        <p class="brand-quote">«Ideal para regalar»</p>
+      </div>
+    </section>
+
+    <!-- ===================== DIFERENCIALES ===================== -->
+    <section class="seccion" id="diferenciales" aria-labelledby="t-dif">
+      <h2 id="t-dif" class="sr-only">Por qué elegirnos</h2>
+      <div class="difs">
+        <div class="dif"><span class="dif__ico" aria-hidden="true">🍓</span><b>Fresas frescas</b><span>Seleccionadas cada día.</span></div>
+        <div class="dif"><span class="dif__ico" aria-hidden="true">🥛</span><b>Crema suave</b><span>Batida al momento.</span></div>
+        <div class="dif"><span class="dif__ico" aria-hidden="true">✨</span><b>Hechas al momento</b><span>Nada preparado con horas.</span></div>
+        <div class="dif"><span class="dif__ico" aria-hidden="true">🛵</span><b>Entrega a domicilio</b><span>Coordinamos por WhatsApp.</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== FORMULARIO DE PEDIDO ===================== -->
+    <section class="seccion" id="pedido" aria-labelledby="t-pedido">
+      <h2 id="t-pedido">Haz tu pedido</h2>
+      <p class="seccion__sub">Llena el formulario y se abre WhatsApp con tu pedido listo para enviar.</p>
+
+      <form class="pedido" id="form-pedido" novalidate>
+        <label for="p-nombre">Tu nombre *</label>
+        <input id="p-nombre" name="nombre" type="text" placeholder="Escribe tu nombre" autocomplete="name" required>
+
+        <label for="p-telefono">Teléfono *</label>
+        <input id="p-telefono" name="telefono" type="tel" placeholder="300 000 0000" autocomplete="tel" required>
+
+        <label for="p-sabor">Sabor *</label>
+        <select id="p-sabor" name="sabor" required></select>
+
+        <label for="p-cantidad">Cantidad *</label>
+        <select id="p-cantidad" name="cantidad" required>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6 o más</option>
+        </select>
+
+        <label for="p-direccion">Dirección de entrega *</label>
+        <input id="p-direccion" name="direccion" type="text" placeholder="Barrio, calle, casa/apto" autocomplete="street-address" required>
+
+        <label for="p-notas">Notas (opcional)</label>
+        <textarea id="p-notas" name="notas" rows="2" placeholder="Ej. sin azúcar, para las 6 pm..."></textarea>
+
+        <button type="submit" class="btn btn--primary">📲 Pedir por WhatsApp</button>
+        <p class="pedido__msg" id="pedido-msg" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="footer">
+      <p><b>Postres Snoopy</b></p>
+      <p class="footer__nota">Postres y fresas con crema · Medellín, Colombia</p>
+      <p class="footer__nota">Al enviar tu pedido aceptas que tus datos se usen solo para atenderlo.</p>
+      <p class="footer__copy">© <span id="anio"></span> Postres Snoopy</p>
+    </footer>
+
+  </main>
+
+  <!-- ===================== BARRA INFERIOR (mobile) ===================== -->
+  <nav class="tabbar" aria-label="Navegación principal">
+    <a href="#inicio" aria-label="Inicio"><span class="tabbar__ico" aria-hidden="true">🏠</span><span>Inicio</span></a>
+    <a href="#productos" aria-label="Galería"><span class="tabbar__ico" aria-hidden="true">🍓</span><span>Galería</span></a>
+    <a href="#pedido" aria-label="Contacto"><span class="tabbar__ico" aria-hidden="true">💬</span><span>Contacto</span></a>
+  </nav>
+
+  <!-- Sprites de iconos SVG -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-instagram" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.9.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 4 4 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 3.6a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4zm0 10.2a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.4-10.5a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 0 1 2.8 0z"/></symbol>
+      <symbol id="i-tiktok" viewBox="0 0 24 24"><path fill="currentColor" d="M19.3 5.6a4.6 4.6 0 0 1-3.3-2 4.7 4.7 0 0 1-.6-2.6h-3.3v13.2a2.6 2.6 0 1 1-2.6-2.6c.3 0 .6 0 .9.1V8.4a5.9 5.9 0 0 0-.9-.1 5.9 5.9 0 1 0 5.9 5.9V9.2a7.9 7.9 0 0 0 3.9 1.1V7a5 5 0 0 1-1-.1z"/></symbol>
+      <symbol id="i-facebook" viewBox="0 0 24 24"><path fill="currentColor" d="M14 8h3V4.5h-3c-2.5 0-4.5 2-4.5 4.5V11H7v3.5h2.5V22H13v-7.5h2.8l.5-3.5H13V9c0-.6.4-1 1-1z"/></symbol>
+      <symbol id="i-whatsapp" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.3.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.1.2 1.5.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2z"/></symbol>
+    </defs>
+  </svg>
+
+  <script src="script.js"></script>
+</body>
+</html>

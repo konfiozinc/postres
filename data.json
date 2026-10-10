@@ -1,0 +1,73 @@
+{
+  "marca": {
+    "nombre": "Postres Snoopy",
+    "eslogan": "Postres con amor, hechos para consentirte",
+    "ciudad": "Medellín, Colombia"
+  },
+  "contacto": {
+    "whatsapp": "573009981576",
+    "whatsappTexto": "Hola, quiero pedir un postre 😊"
+  },
+  "redes": [
+    { "id": "instagram", "nombre": "Instagram", "url": "" },
+    { "id": "tiktok",     "nombre": "TikTok",     "url": "" },
+    { "id": "facebook",   "nombre": "Facebook",   "url": "" },
+    { "id": "whatsapp",   "nombre": "WhatsApp",   "url": "https://wa.me/573009981576" }
+  ],
+  "productos": [
+    {
+      "id": "fresas-crema",
+      "nombre": "Fresas con crema",
+      "descripcion": "Fresas frescas con crema suave, sencillas y deliciosas.",
+      "precio": 15000,
+      "ingredientes": ["fresas", "crema de leche", "azúcar"],
+      "alergenos": ["lácteos"],
+      "imagen": "assets/postre-fresas-crema.webp"
+    },
+    {
+      "id": "fresas-chocolate",
+      "nombre": "Fresas con chocolate",
+      "descripcion": "Con lluvia de chocolate y trocitos crocantes.",
+      "precio": 17000,
+      "ingredientes": ["fresas", "crema de leche", "chocolate", "trocitos crocantes"],
+      "alergenos": ["lácteos"],
+      "imagen": "assets/postre-fresas-chocolate.webp"
+    },
+    {
+      "id": "fresas-caramelo",
+      "nombre": "Caramelo y galleta",
+      "descripcion": "Con salsa de caramelo y galleta crocante desmenuzada.",
+      "precio": 17000,
+      "ingredientes": ["fresas", "crema de leche", "caramelo", "galleta"],
+      "alergenos": ["lácteos", "gluten"],
+      "imagen": "assets/postre-fresas-caramelo.webp"
+    },
+    {
+      "id": "fresas-nutella",
+      "nombre": "Fresas con Nutella",
+      "descripcion": "Crema de avellanas y chispas de chocolate.",
+      "precio": 18000,
+      "ingredientes": ["fresas", "crema de leche", "crema de avellanas", "chispas de chocolate"],
+      "alergenos": ["lácteos", "frutos secos"],
+      "imagen": "assets/postre-fresas-nutella.webp"
+    },
+    {
+      "id": "fresas-oreo",
+      "nombre": "Fresas con Oreo",
+      "descripcion": "Crema batida y galletas Oreo trituradas con lluvia de chocolate.",
+      "precio": 18000,
+      "ingredientes": ["fresas", "crema batida", "galletas Oreo", "chocolate"],
+      "alergenos": ["lácteos", "gluten"],
+      "imagen": "assets/postre-fresas-oreo.webp"
+    },
+    {
+      "id": "fresas-mango",
+      "nombre": "Fresas con mango",
+      "descripcion": "Trozos de mango, crema y un toque de maracuyá.",
+      "precio": 18000,
+      "ingredientes": ["fresas", "mango", "crema de leche", "maracuyá"],
+      "alergenos": ["lácteos"],
+      "imagen": "assets/postre-fresas-mango.webp"
+    }
+  ]
+}
