@@ -1,0 +1,3 @@
+# Imágenes originales sin comprimir (ya procesadas a WebP en assets/).
+# Se conservan por si hay que re-encuadrar o regenerar a otra medida.
+tools/originales-png/
