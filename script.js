@@ -91,7 +91,7 @@ function pintarGaleria() {
   const gal = document.getElementById("galeria");
   gal.innerHTML = DATA.productos.map((p) => `
     <article class="prod">
-      <img class="prod__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" width="600" height="450"
+      <img class="prod__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" width="720" height="960"
            onerror="this.style.display='none';this.parentNode.querySelector('.prod__ph').style.display='flex'">
       <span class="prod__ph" aria-hidden="true" style="display:none">🍓</span>
       <div class="prod__body">

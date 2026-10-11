@@ -115,7 +115,7 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--rosa-claro); border-radius: var(--radio); overflow: hidden;
   box-shadow: var(--sombra); display: flex; flex-direction: column;
 }
-.prod__img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: center; background: var(--rosa-claro); }
+.prod__img { width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; object-position: center 30%; background: var(--rosa-claro); }
 /* Placeholder que se muestra si la imagen no existe todavía */
 .prod__ph {
   width: 100%; aspect-ratio: 4/3; align-items: center; justify-content: center;
@@ -203,7 +203,7 @@ img { max-width: 100%; display: block; }
 
 /* ---- Botón flotante de WhatsApp ---- */
 .wa-float {
-  position: fixed; right: 16px; z-index: 30;
+  position: fixed; right: 16px; z-index: 50;
   bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   width: 60px; height: 60px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -233,4 +233,9 @@ img { max-width: 100%; display: block; }
 /* En móvil, las flechas siempre visibles (con menos opacidad) */
 @media (max-width: 479px) {
   .car-arrow { opacity: 0.55; }
+}
+/* Botón WhatsApp más pequeño y alto en móvil para no tapar el "Pedir" */
+@media (max-width: 480px) {
+  .wa-float { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); right: 12px; width: 48px; height: 48px; }
+  .wa-float .ico { width: 24px; height: 24px; }
 }
