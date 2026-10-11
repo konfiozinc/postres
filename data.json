@@ -18,7 +18,7 @@
     {
       "id": "fresas-crema",
       "nombre": "Fresas con crema",
-      "descripcion": "Fresas frescas con crema suave, sencillas y deliciosas.",
+      "descripcion": "Fresas frescas y crema suave",
       "precio": 15000,
       "ingredientes": ["fresas", "crema de leche", "azúcar"],
       "alergenos": ["lácteos"],
@@ -27,7 +27,7 @@
     {
       "id": "fresas-chocolate",
       "nombre": "Fresas con chocolate",
-      "descripcion": "Con lluvia de chocolate y trocitos crocantes.",
+      "descripcion": "Chocolate y trocitos crocantes",
       "precio": 17000,
       "ingredientes": ["fresas", "crema de leche", "chocolate", "trocitos crocantes"],
       "alergenos": ["lácteos"],
@@ -36,25 +36,25 @@
     {
       "id": "fresas-caramelo",
       "nombre": "Caramelo y galleta",
-      "descripcion": "Con salsa de caramelo y galleta crocante desmenuzada.",
+      "descripcion": "Caramelo y galleta crocante",
       "precio": 17000,
       "ingredientes": ["fresas", "crema de leche", "caramelo", "galleta"],
       "alergenos": ["lácteos", "gluten"],
       "imagen": "assets/postre-fresas-caramelo.webp"
     },
     {
-      "id": "fresas-nutella",
-      "nombre": "Fresas con Nutella",
-      "descripcion": "Crema de avellanas y chispas de chocolate.",
-      "precio": 18000,
-      "ingredientes": ["fresas", "crema de leche", "crema de avellanas", "chispas de chocolate"],
-      "alergenos": ["lácteos", "frutos secos"],
-      "imagen": "assets/postre-fresas-nutella.webp"
+      "id": "fresas-maracuya",
+      "nombre": "Fresas con maracuyá",
+      "descripcion": "Crema suave con maracuyá",
+      "precio": 17000,
+      "ingredientes": ["fresas", "crema de leche", "maracuyá"],
+      "alergenos": ["lácteos"],
+      "imagen": "assets/postre-fresas-maracuya.webp"
     },
     {
       "id": "fresas-oreo",
       "nombre": "Fresas con Oreo",
-      "descripcion": "Crema batida y galletas Oreo trituradas con lluvia de chocolate.",
+      "descripcion": "Galleta Oreo y chocolate",
       "precio": 18000,
       "ingredientes": ["fresas", "crema batida", "galletas Oreo", "chocolate"],
       "alergenos": ["lácteos", "gluten"],
@@ -63,7 +63,7 @@
     {
       "id": "fresas-mango",
       "nombre": "Fresas con mango",
-      "descripcion": "Trozos de mango, crema y un toque de maracuyá.",
+      "descripcion": "Mango fresco con crema",
       "precio": 18000,
       "ingredientes": ["fresas", "mango", "crema de leche", "maracuyá"],
       "alergenos": ["lácteos"],

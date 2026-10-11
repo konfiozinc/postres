@@ -19,12 +19,12 @@ const FALLBACK = {
     { id: "whatsapp",   nombre: "WhatsApp",   url: "https://wa.me/573009981576" }
   ],
   productos: [
-    { id: "fresas-crema",     nombre: "Fresas con crema",     descripcion: "Fresas frescas con crema suave, sencillas y deliciosas.", precio: 15000, imagen: "assets/postre-fresas-crema.webp", ingredientes: ["fresas", "crema", "azúcar"], alergenos: ["lácteos"] },
-    { id: "fresas-chocolate", nombre: "Fresas con chocolate", descripcion: "Con lluvia de chocolate y trocitos crocantes.", precio: 17000, imagen: "assets/postre-fresas-chocolate.webp", ingredientes: ["fresas", "crema", "chocolate"], alergenos: ["lácteos"] },
-    { id: "fresas-caramelo",  nombre: "Caramelo y galleta",   descripcion: "Con salsa de caramelo y galleta crocante desmenuzada.", precio: 17000, imagen: "assets/postre-fresas-caramelo.webp", ingredientes: ["fresas", "crema", "caramelo", "galleta"], alergenos: ["lácteos", "gluten"] },
-    { id: "fresas-nutella",   nombre: "Fresas con Nutella",   descripcion: "Crema de avellanas y chispas de chocolate.", precio: 18000, imagen: "assets/postre-fresas-nutella.webp", ingredientes: ["fresas", "crema", "crema de avellanas", "chispas de chocolate"], alergenos: ["lácteos", "frutos secos"] },
-    { id: "fresas-oreo",      nombre: "Fresas con Oreo",      descripcion: "Crema batida y galletas Oreo trituradas con lluvia de chocolate.", precio: 18000, imagen: "assets/postre-fresas-oreo.webp", ingredientes: ["fresas", "crema batida", "Oreo", "chocolate"], alergenos: ["lácteos", "gluten"] },
-    { id: "fresas-mango",     nombre: "Fresas con mango",     descripcion: "Trozos de mango, crema y un toque de maracuyá.", precio: 18000, imagen: "assets/postre-fresas-mango.webp", ingredientes: ["fresas", "mango", "crema", "maracuyá"], alergenos: ["lácteos"] }
+    { id: "fresas-crema",     nombre: "Fresas con crema",     descripcion: "Fresas frescas y crema suave", precio: 15000, imagen: "assets/postre-fresas-crema.webp", ingredientes: ["fresas", "crema", "azúcar"], alergenos: ["lácteos"] },
+    { id: "fresas-chocolate", nombre: "Fresas con chocolate", descripcion: "Chocolate y trocitos crocantes", precio: 17000, imagen: "assets/postre-fresas-chocolate.webp", ingredientes: ["fresas", "crema", "chocolate"], alergenos: ["lácteos"] },
+    { id: "fresas-caramelo",  nombre: "Caramelo y galleta",   descripcion: "Caramelo y galleta crocante", precio: 17000, imagen: "assets/postre-fresas-caramelo.webp", ingredientes: ["fresas", "crema", "caramelo", "galleta"], alergenos: ["lácteos", "gluten"] },
+    { id: "fresas-maracuya",  nombre: "Fresas con maracuyá",  descripcion: "Crema suave con maracuyá", precio: 17000, imagen: "assets/postre-fresas-maracuya.webp", ingredientes: ["fresas", "crema", "maracuyá"], alergenos: ["lácteos"] },
+    { id: "fresas-oreo",      nombre: "Fresas con Oreo",      descripcion: "Galleta Oreo y chocolate", precio: 18000, imagen: "assets/postre-fresas-oreo.webp", ingredientes: ["fresas", "crema batida", "Oreo", "chocolate"], alergenos: ["lácteos", "gluten"] },
+    { id: "fresas-mango",     nombre: "Fresas con mango",     descripcion: "Mango fresco con crema", precio: 18000, imagen: "assets/postre-fresas-mango.webp", ingredientes: ["fresas", "mango", "crema", "maracuyá"], alergenos: ["lácteos"] }
   ]
 };
 
