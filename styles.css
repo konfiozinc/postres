@@ -299,37 +299,76 @@ img { max-width: 100%; display: block; }
 
 /* ---- Footer ---- */
 .footer {
-  text-align: center;
   background: #3d1f1a; /* chocolate oscuro */
   border-radius: 20px;
-  margin: 20px 16px 0;
-  padding: 36px 24px 28px;
-  color: #fffaf3;
+  margin: 20px 16px;
+  padding: 40px 24px 32px;
+  text-align: center;
+  font-family: var(--fuente-cuerpo);
+}
+.footer__inner {
+  max-width: 520px;
+  margin: 0 auto;
 }
 .footer__titulo {
-  color: #ffb6c1;
   font-family: var(--fuente-titulo);
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  margin: 0 0 12px;
+  color: #fffaf3;
+  margin: 0 0 8px;
+}
+.footer__titulo .highlight-rojo { color: #ffb6c1; }
+.footer__linea {
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: #e63950;
+  border-radius: 2px;
+  margin: 0 auto 16px;
 }
 .footer__subtitulo {
   color: #fffaf3;
-  font-size: 0.9rem;
   opacity: 0.9;
-  margin: 0 0 8px;
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+  line-height: 1.4;
+}
+.footer__card {
+  background: #fffaf3;
+  border-radius: 16px;
+  padding: 20px 18px;
+  margin-bottom: 24px;
+  text-align: center;
 }
 .footer__legal {
-  color: #fffaf3;
+  color: #4a2c2a;
   font-size: 0.8rem;
-  opacity: 0.7;
   line-height: 1.5;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 .footer__copy {
-  color: var(--caramelo);
+  color: #b9834f;
   font-size: 0.8rem;
-  margin: 12px 0 0;
+  font-weight: 500;
+  margin: 0;
+}
+.footer__marca {
+  color: #fffaf3;
+  opacity: 0.8;
+  font-size: 0.85rem;
+  margin: 8px 0 0;
+}
+.footer__marca a {
+  color: #ffb6c1;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255, 182, 193, 0.5);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.footer__marca a:hover,
+.footer__marca a:focus {
+  color: #e63950;
+  border-bottom-color: #e63950;
 }
 
 /* ---- Barra inferior fija (mobile) ---- */
