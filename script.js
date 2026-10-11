@@ -265,32 +265,107 @@ function vigilarVideo() {
   if (src) src.addEventListener("error", ocultar, { once: true });
 }
 
-/* ---- Partículas flotantes del hero (corazones) ---- */
+/* ---- Partículas flotantes del hero: frutas que suben y explotan (canvas) ---- */
 function crearParticulas() {
-  const cont = document.querySelector(".hero .particles");
-  if (!cont) return;
+  const canvas = document.getElementById("hero-particles");
+  const hero = document.querySelector(".hero");
+  if (!canvas || !hero) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  const movil = window.matchMedia("(max-width: 480px)").matches;
-  const total = movil ? 12 : 15;
-  const colores = ["#e63950", "#ffb6c1"];
-  const frag = document.createDocumentFragment();
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  for (let i = 0; i < total; i++) {
-    const p = document.createElement("span");
-    p.className = "particle";
-    p.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
-    const tam = 12 + Math.random() * 12; // 12–24px
-    p.style.width = tam.toFixed(1) + "px";
-    p.style.height = tam.toFixed(1) + "px";
-    p.style.left = (Math.random() * 100).toFixed(2) + "%";
-    p.style.color = colores[i % 2];
-    p.style.setProperty("--po", (0.3 + Math.random() * 0.3).toFixed(2));
-    p.style.animationDuration = (8 + Math.random() * 4).toFixed(2) + "s";
-    p.style.animationDelay = (Math.random() * 10).toFixed(2) + "s";
-    frag.appendChild(p);
+  const movil = window.matchMedia("(max-width: 480px)").matches;
+  const N = movil ? 8 : 12;
+  const frutas = ["🍓", "🫐", "🍒", "❤️"];
+  const chispas = ["#e63950", "#ffb6c1"];
+
+  let W = 0, H = 0, partes = [], chispa = [], visible = true;
+
+  const redimensionar = () => {
+    const r = hero.getBoundingClientRect();
+    W = r.width; H = r.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  redimensionar();
+  window.addEventListener("resize", redimensionar);
+
+  const nueva = (y) => ({
+    x: Math.random() * W,
+    y: y == null ? H + 40 : y,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: 0.35 + Math.random() * 0.6,
+    tam: 16 + Math.random() * 14,
+    rot: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 0.03,
+    emoji: frutas[(Math.random() * frutas.length) | 0],
+    op: 0.4 + Math.random() * 0.5
+  });
+
+  const explotar = (p) => {
+    const n = movil ? 5 : 7;
+    for (let i = 0; i < n; i++) {
+      const a = (Math.PI * 2 * i) / n + Math.random() * 0.6;
+      const v = 1.5 + Math.random() * 2.5;
+      chispa.push({
+        x: p.x, y: p.y,
+        vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        tam: 2 + Math.random() * 3,
+        color: chispas[i % 2],
+        vida: 1
+      });
+    }
+  };
+
+  for (let i = 0; i < N; i++) partes.push(nueva(Math.random() * H));
+
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((e) => { visible = e[0].isIntersecting; }, { threshold: 0 });
+    io.observe(hero);
   }
-  cont.appendChild(frag);
+
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (!visible) return;
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < partes.length; i++) {
+      const p = partes[i];
+      p.y -= p.vy;
+      p.x += p.vx;
+      p.rot += p.vr;
+
+      if (p.y < 50) { explotar(p); partes[i] = nueva(); continue; }
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = p.op;
+      ctx.font = p.tam + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(p.emoji, 0, 0);
+      ctx.restore();
+    }
+
+    for (let i = chispa.length - 1; i >= 0; i--) {
+      const s = chispa[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 0.06;
+      s.vida -= 0.025;
+      if (s.vida <= 0) { chispa.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(0, s.vida);
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.tam, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  })();
 }
 
 /* ---- Arranque ---- */
