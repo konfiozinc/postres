@@ -239,10 +239,9 @@ img { max-width: 100%; display: block; }
 }
 .tabbar a {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  text-decoration: none; color: var(--marron-suave); font-size: 12px; font-weight: 600;
+  text-decoration: none; color: var(--marron); font-size: 12px; font-weight: 600;
 }
 .tabbar a[aria-current], .tabbar a:hover { color: var(--rojo); }
-.tabbar__ico { font-size: 22px; }
 .tabbar svg.tabbar__ico { width: 22px; height: 22px; }
 
 /* ---- Botón flotante de WhatsApp ---- */
