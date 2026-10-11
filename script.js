@@ -368,11 +368,38 @@ function crearParticulas() {
   })();
 }
 
+/* ---- Scroll-spy: marca el tab activo según la sección visible ---- */
+function initScrollSpy() {
+  const items = [...document.querySelectorAll(".tabbar a")];
+  if (!items.length || !("IntersectionObserver" in window)) return;
+
+  const activar = (href) => {
+    items.forEach((a) => a.classList.toggle("activo", a.getAttribute("href") === href));
+  };
+
+  // Feedback inmediato al tocar (el scroll suave ya viene del CSS).
+  items.forEach((a) => a.addEventListener("click", () => activar(a.getAttribute("href"))));
+
+  // Solo se observan las secciones que tienen su tab correspondiente.
+  const conTab = new Set(items.map((a) => (a.getAttribute("href") || "").slice(1)));
+  const secciones = [...document.querySelectorAll("section[id], footer[id]")]
+    .filter((s) => conTab.has(s.id));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) activar("#" + e.target.id);
+    });
+  }, { rootMargin: "-40% 0px -40% 0px", threshold: 0 });
+
+  secciones.forEach((s) => observer.observe(s));
+}
+
 /* ---- Arranque ---- */
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("anio").textContent = new Date().getFullYear();
   document.getElementById("form-pedido").addEventListener("submit", enviarPedido);
   vigilarVideo();
   crearParticulas();
+  initScrollSpy();
   cargarDatos();
 });
