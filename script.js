@@ -47,6 +47,7 @@ async function cargarDatos() {
 function pintar() {
   pintarRedes();
   pintarGaleria();
+  pintarControlesCarrusel();
   pintarSelect();
   inyectarJSONLD();
   pintarFlotante();
@@ -125,6 +126,75 @@ function pintarGaleria() {
         encodeURIComponent("Mira este postre: " + p.nombre + " — " + pesos(p.precio));
       window.open(url, "_blank", "noopener");
     });
+  });
+}
+
+/* ---- Controles del carrusel: flechas, dots y autoplay ---- */
+function pintarControlesCarrusel() {
+  const gal = document.getElementById("galeria");
+  const dots = document.getElementById("car-dots");
+  const prev = document.getElementById("car-prev");
+  const next = document.getElementById("car-next");
+  if (!gal || !dots || !prev || !next) return;
+
+  const cards = [...gal.children];
+  if (!cards.length) return;
+  const GAP = 14; // debe coincidir con .galeria { gap }
+  const paso = () => cards[0].getBoundingClientRect().width + GAP;
+
+  // Un dot por tarjeta
+  dots.innerHTML = "";
+  cards.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "car-dot";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-label", "Ir a la diapositiva " + (i + 1));
+    b.addEventListener("click", () =>
+      c.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }));
+    dots.appendChild(b);
+  });
+
+  // Flechas
+  prev.addEventListener("click", () => gal.scrollBy({ left: -paso(), behavior: "smooth" }));
+  next.addEventListener("click", () => gal.scrollBy({ left: paso(), behavior: "smooth" }));
+
+  // Dot activo: la tarjeta cuyo centro está más cerca del centro visible
+  const actualizar = () => {
+    const centro = gal.getBoundingClientRect().left + gal.clientWidth / 2;
+    let idx = 0, mejor = Infinity;
+    cards.forEach((c, i) => {
+      const r = c.getBoundingClientRect();
+      const d = Math.abs(r.left + r.width / 2 - centro);
+      if (d < mejor) { mejor = d; idx = i; }
+    });
+    [...dots.children].forEach((d, i) => d.classList.toggle("is-active", i === idx));
+  };
+  gal.addEventListener("scroll", actualizar, { passive: true });
+  window.addEventListener("resize", actualizar);
+  actualizar();
+
+  // Autoplay: se omite si el usuario prefiere menos movimiento
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  let timer = null;
+  const arrancar = () => {
+    if (timer) return;
+    timer = setInterval(() => {
+      const fin = gal.scrollWidth - gal.clientWidth;
+      if (gal.scrollLeft >= fin - 4) gal.scrollTo({ left: 0, behavior: "smooth" });
+      else gal.scrollBy({ left: paso(), behavior: "smooth" });
+    }, 4000);
+  };
+  const parar = () => { if (timer) { clearInterval(timer); timer = null; } };
+
+  arrancar();
+  gal.addEventListener("mouseenter", parar);
+  gal.addEventListener("mouseleave", arrancar);
+  gal.addEventListener("focusin", parar);
+  gal.addEventListener("focusout", arrancar);
+  document.addEventListener("visibilitychange", () => {
+    document.hidden ? parar() : arrancar();
   });
 }
 

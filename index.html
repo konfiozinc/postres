@@ -76,10 +76,15 @@
     </nav>
 
     <!-- ===================== GALERÍA DE PRODUCTOS ===================== -->
-    <section class="seccion" id="productos" aria-labelledby="t-productos">
+    <section class="seccion" id="sabores" aria-labelledby="t-productos">
       <h2 id="t-productos">Nuestros postres</h2>
       <p class="seccion__sub">Elige tu favorito y pídelo por WhatsApp.</p>
-      <div class="galeria" id="galeria" tabindex="0" aria-label="Carrusel de postres"></div>
+      <div class="carousel" id="carousel" role="region" aria-label="Galería de postres">
+        <div class="galeria" id="galeria" tabindex="0" aria-label="Carrusel de postres"></div>
+        <button type="button" class="car-arrow car-arrow--prev" id="car-prev" aria-label="Anterior">‹</button>
+        <button type="button" class="car-arrow car-arrow--next" id="car-next" aria-label="Siguiente">›</button>
+        <div class="car-dots" id="car-dots" role="tablist" aria-label="Indicadores de diapositiva"></div>
+      </div>
     </section>
 
     <!-- ===================== SOBRE NOSOTROS ===================== -->
@@ -151,7 +156,8 @@
   <!-- ===================== BARRA INFERIOR (mobile) ===================== -->
   <nav class="tabbar" aria-label="Navegación principal">
     <a href="#inicio" aria-label="Inicio"><span class="tabbar__ico" aria-hidden="true">🏠</span><span>Inicio</span></a>
-    <a href="#productos" aria-label="Galería"><span class="tabbar__ico" aria-hidden="true">🍓</span><span>Galería</span></a>
+    <a href="#sabores" aria-label="Galería"><span class="tabbar__ico" aria-hidden="true">🍓</span><span>Galería</span></a>
+    <a href="#sabores" aria-label="Sabores"><span class="tabbar__ico" aria-hidden="true">🍨</span><span>Sabores</span></a>
     <a href="#pedido" aria-label="Contacto"><span class="tabbar__ico" aria-hidden="true">💬</span><span>Contacto</span></a>
   </nav>
 
