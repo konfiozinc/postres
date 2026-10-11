@@ -102,9 +102,6 @@ function pintarGaleria() {
           <span class="prod__precio">${pesos(p.precio)}</span>
           <button type="button" class="btn btn--primary" data-pedir="${esc(p.id)}">Pedir</button>
         </div>
-        <div class="prod__compartir">
-          <button type="button" class="btn btn--ghost" data-compartir="${esc(p.id)}" aria-label="Compartir ${esc(p.nombre)} por WhatsApp">↗ Compartir</button>
-        </div>
       </div>
     </article>`).join("");
 
@@ -114,17 +111,6 @@ function pintarGaleria() {
       sel.value = b.dataset.pedir;
       document.getElementById("pedido").scrollIntoView({ behavior: "smooth" });
       document.getElementById("p-cantidad").focus({ preventScroll: true });
-    });
-  });
-
-  // Compartir un postre concreto por WhatsApp
-  gal.querySelectorAll("[data-compartir]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const p = DATA.productos.find((x) => x.id === b.dataset.compartir);
-      if (!p) return;
-      const url = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" +
-        encodeURIComponent("Mira este postre: " + p.nombre + " — " + pesos(p.precio));
-      window.open(url, "_blank", "noopener");
     });
   });
 }
