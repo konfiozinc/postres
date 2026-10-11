@@ -38,7 +38,7 @@ La app tiene un **respaldo embebido** en `script.js`: si `data.json` no carga, s
 
 Todo se edita en **`data.json`**:
 
-- **Productos:** array `productos` (nombre, descripción, `precio` en pesos, `ingredientes`, `alergenos`, `imagen`).
+- **Productos:** array `productos` (`nombre` corto para la tarjeta, `nombreCompleto` para el formulario/WhatsApp, `descripcion`, `precio` en pesos, `alergenos`, `imagen`).
 - **WhatsApp:** `contacto.whatsapp` — número en formato internacional **sin `+`** (ej. `"573009981576"`).
 - **Redes:** array `redes` — deja `"url": ""` mientras no exista el perfil; cuando lo crees, pon la URL completa.
 

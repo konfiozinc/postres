@@ -19,12 +19,12 @@ const FALLBACK = {
     { id: "whatsapp",   nombre: "WhatsApp",   url: "https://wa.me/573009981576" }
   ],
   productos: [
-    { id: "fresas-crema",     nombre: "Fresas con crema",     descripcion: "Fresas frescas y crema suave", precio: 15000, imagen: "assets/postre-fresas-crema.webp", ingredientes: ["fresas", "crema", "azúcar"], alergenos: ["lácteos"] },
-    { id: "fresas-chocolate", nombre: "Fresas con chocolate", descripcion: "Chocolate y trocitos crocantes", precio: 17000, imagen: "assets/postre-fresas-chocolate.webp", ingredientes: ["fresas", "crema", "chocolate"], alergenos: ["lácteos"] },
-    { id: "fresas-caramelo",  nombre: "Caramelo y galleta",   descripcion: "Caramelo y galleta crocante", precio: 17000, imagen: "assets/postre-fresas-caramelo.webp", ingredientes: ["fresas", "crema", "caramelo", "galleta"], alergenos: ["lácteos", "gluten"] },
-    { id: "fresas-maracuya",  nombre: "Fresas con maracuyá",  descripcion: "Crema suave con maracuyá", precio: 17000, imagen: "assets/postre-fresas-maracuya.webp", ingredientes: ["fresas", "crema", "maracuyá"], alergenos: ["lácteos"] },
-    { id: "fresas-oreo",      nombre: "Fresas con Oreo",      descripcion: "Galleta Oreo y chocolate", precio: 18000, imagen: "assets/postre-fresas-oreo.webp", ingredientes: ["fresas", "crema batida", "Oreo", "chocolate"], alergenos: ["lácteos", "gluten"] },
-    { id: "fresas-mango",     nombre: "Fresas con mango",     descripcion: "Mango fresco con crema", precio: 18000, imagen: "assets/postre-fresas-mango.webp", ingredientes: ["fresas", "mango", "crema", "maracuyá"], alergenos: ["lácteos"] }
+    { id: "crema",     nombre: "Fresas con crema",     nombreCompleto: "Fresas con crema",     descripcion: "Fresas frescas y crema suave", precio: 10000, imagen: "assets/postre-fresas-crema.webp", alergenos: ["Lácteos"] },
+    { id: "chocolate", nombre: "Fresas con chocolate", nombreCompleto: "Fresas con chocolate", descripcion: "Chocolate y trocitos crocantes", precio: 10000, imagen: "assets/postre-fresas-chocolate.webp", alergenos: ["Lácteos"] },
+    { id: "caramelo",  nombre: "Caramelo y galleta",   nombreCompleto: "Caramelo y galleta",   descripcion: "Caramelo y galleta crocante", precio: 10000, imagen: "assets/postre-fresas-caramelo.webp", alergenos: ["Lácteos", "gluten"] },
+    { id: "maracuya",  nombre: "Maracuyá",             nombreCompleto: "Caramelo, crema y maracuyá", descripcion: "Caramelo con maracuyá", precio: 8000, imagen: "assets/postre-fresas-maracuya.webp", alergenos: ["Lácteos"] },
+    { id: "oreo",      nombre: "Oreo",                 nombreCompleto: "Caramelo, crema y Oreo", descripcion: "Caramelo con Oreo", precio: 8000, imagen: "assets/postre-fresas-oreo.webp", alergenos: ["Lácteos", "gluten"] },
+    { id: "mango",     nombre: "Mango",                nombreCompleto: "Caramelo, crema y mango", descripcion: "Caramelo con mango", precio: 8000, imagen: "assets/postre-fresas-mango.webp", alergenos: ["Lácteos"] }
   ]
 };
 
@@ -61,7 +61,7 @@ function pintarFlotante() {
   a.href = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent("Hola, quiero hacer un pedido 😊");
   a.target = "_blank";
   a.rel = "noopener";
-  a.setAttribute("aria-label", "Pedir por WhatsApp");
+  a.setAttribute("aria-label", "Contactar por WhatsApp");
   a.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg>';
   document.body.appendChild(a);
 
@@ -188,7 +188,7 @@ function pintarControlesCarrusel() {
 function pintarSelect() {
   const sel = document.getElementById("p-sabor");
   sel.innerHTML = '<option value="">Selecciona un sabor</option>' +
-    DATA.productos.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)} — ${pesos(p.precio)}</option>`).join("");
+    DATA.productos.map((p) => `<option value="${esc(p.id)}">${esc(p.nombreCompleto)} — ${pesos(p.precio)}</option>`).join("");
 }
 
 /* ---- JSON-LD de productos (MenuItem) para SEO ---- */
@@ -202,7 +202,7 @@ function inyectarJSONLD() {
       "position": i + 1,
       "item": {
         "@type": "MenuItem",
-        "name": p.nombre,
+        "name": p.nombreCompleto,
         "description": p.descripcion,
         "offers": { "@type": "Offer", "price": String(p.precio), "priceCurrency": "COP" }
       }
@@ -233,7 +233,7 @@ function enviarPedido(ev) {
   }
 
   const producto = DATA.productos.find((p) => p.id === datos.sabor);
-  const sabor = producto ? producto.nombre : datos.sabor;
+  const sabor = producto ? producto.nombreCompleto : datos.sabor;
   const partes = [
     "Hola, soy " + datos.nombre.trim(),
     "Tel: " + datos.telefono.trim(),
@@ -265,10 +265,39 @@ function vigilarVideo() {
   if (src) src.addEventListener("error", ocultar, { once: true });
 }
 
+/* ---- Partículas flotantes del hero (corazones) ---- */
+function crearParticulas() {
+  const cont = document.querySelector(".hero .particles");
+  if (!cont) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const movil = window.matchMedia("(max-width: 480px)").matches;
+  const total = movil ? 12 : 15;
+  const colores = ["#e63950", "#ffb6c1"];
+  const frag = document.createDocumentFragment();
+
+  for (let i = 0; i < total; i++) {
+    const p = document.createElement("span");
+    p.className = "particle";
+    p.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+    const tam = 12 + Math.random() * 12; // 12–24px
+    p.style.width = tam.toFixed(1) + "px";
+    p.style.height = tam.toFixed(1) + "px";
+    p.style.left = (Math.random() * 100).toFixed(2) + "%";
+    p.style.color = colores[i % 2];
+    p.style.setProperty("--po", (0.3 + Math.random() * 0.3).toFixed(2));
+    p.style.animationDuration = (8 + Math.random() * 4).toFixed(2) + "s";
+    p.style.animationDelay = (Math.random() * 10).toFixed(2) + "s";
+    frag.appendChild(p);
+  }
+  cont.appendChild(frag);
+}
+
 /* ---- Arranque ---- */
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("anio").textContent = new Date().getFullYear();
   document.getElementById("form-pedido").addEventListener("submit", enviarPedido);
   vigilarVideo();
+  crearParticulas();
   cargarDatos();
 });
