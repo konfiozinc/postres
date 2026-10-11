@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Postres Snoopy — Postres con amor">
   <meta property="og:description" content="Fresas con crema y postres hechos al momento. Pide por WhatsApp.">
-  <meta property="og:image" content="https://konfiozinc.github.io/postres/assets/banner.webp">
+  <meta property="og:image" content="https://konfiozinc.github.io/postres/assets/hero-banner.webp">
   <meta property="og:url" content="https://konfiozinc.github.io/postres/">
   <meta name="twitter:card" content="summary_large_image">
 
@@ -48,7 +48,7 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero" id="inicio">
       <div class="hero__bg" aria-hidden="true"></div>
-      <video class="hero__video" id="heroVideo" autoplay muted loop playsinline webkit-playsinline preload="none" poster="assets/banner.webp">
+      <video class="hero__video" id="heroVideo" autoplay muted loop playsinline webkit-playsinline preload="none" poster="assets/hero-banner.webp">
         <source src="assets/hero.mp4" type="video/mp4">
       </video>
       <div class="hero__overlay" aria-hidden="true"></div>
@@ -108,40 +108,11 @@
       </div>
     </section>
 
-    <!-- ===================== FORMULARIO DE PEDIDO ===================== -->
+    <!-- ===================== PEDIDO (CTA al carrito) ===================== -->
     <section class="seccion" id="pedido" aria-labelledby="t-pedido">
       <h2 id="t-pedido">Haz tu <span class="highlight-rojo">pedido</span></h2>
-      <p class="seccion__sub">Llena el formulario y se abre WhatsApp con tu pedido listo para enviar.</p>
-
-      <form class="pedido" id="form-pedido" novalidate>
-        <label for="p-nombre">Tu nombre *</label>
-        <input id="p-nombre" name="nombre" type="text" placeholder="Escribe tu nombre" autocomplete="name" required>
-
-        <label for="p-telefono">Teléfono *</label>
-        <input id="p-telefono" name="telefono" type="tel" placeholder="300 000 0000" autocomplete="tel" required>
-
-        <label for="p-sabor">Sabor *</label>
-        <select id="p-sabor" name="sabor" required></select>
-
-        <label for="p-cantidad">Cantidad *</label>
-        <select id="p-cantidad" name="cantidad" required>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6 o más</option>
-        </select>
-
-        <label for="p-direccion">Dirección de entrega *</label>
-        <input id="p-direccion" name="direccion" type="text" placeholder="Barrio, calle, casa/apto" autocomplete="street-address" required>
-
-        <label for="p-notas">Notas (opcional)</label>
-        <textarea id="p-notas" name="notas" rows="2" placeholder="Ej. sin azúcar, para las 6 pm..."></textarea>
-
-        <button type="submit" class="btn btn--primary"><svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-.5 0-1 .2-1.4.6L8 5.2c-.3.3-.8.3-1.1 0L5.5 4c-.6-.6-1.6 0-1.4.8.7 3 2.7 7.6 5.4 11.6 1.4 2 2.5 3.3 3.5 3.3s2.1-1.3 3.5-3.3c2.7-4 4.7-8.6 5.4-11.6.2-.8-.8-1.4-1.4-.8l-1.4 1.2c-.3.3-.8.3-1.1 0L13.4 2.6C13 2.2 12.5 2 12 2z"/><circle cx="12" cy="12" r="1.5" fill="#e63950"/><circle cx="9" cy="10" r="1" fill="#e63950"/><circle cx="15" cy="10" r="1" fill="#e63950"/><circle cx="10" cy="14" r="1" fill="#e63950"/><circle cx="14" cy="14" r="1" fill="#e63950"/></svg> Pedir por WhatsApp</button>
-        <p class="pedido__msg" id="pedido-msg" role="status" aria-live="polite"></p>
-      </form>
+      <p class="seccion__sub">Agrega tus postres favoritos y envíanos todo el pedido por WhatsApp.</p>
+      <button type="button" class="btn btn--primary" id="btn-abrir-carrito">🛒 Ver mi pedido</button>
     </section>
 
     <!-- ===================== FOOTER ===================== -->
@@ -157,10 +128,49 @@
   <!-- ===================== BARRA INFERIOR (mobile) ===================== -->
   <nav class="tabbar" aria-label="Navegación principal">
     <a href="#inicio" aria-label="Inicio"><svg class="tabbar__ico" aria-hidden="true"><use href="#i-home"></use></svg><span>Inicio</span></a>
-    <a href="#sabores" aria-label="Galería"><svg class="tabbar__ico" aria-hidden="true"><use href="#i-fresa"></use></svg><span>Galería</span></a>
     <a href="#sabores" aria-label="Sabores"><svg class="tabbar__ico" aria-hidden="true"><use href="#i-copa"></use></svg><span>Sabores</span></a>
     <a href="#pedido" aria-label="Contacto"><svg class="tabbar__ico" aria-hidden="true"><use href="#i-chat"></use></svg><span>Contacto</span></a>
   </nav>
+
+  <!-- Botón flotante del carrito -->
+  <button type="button" class="cart-float is-hidden" id="cart-float" aria-label="Abrir carrito" aria-live="polite"></button>
+
+  <!-- ===================== DRAWER DEL CARRITO ===================== -->
+  <div class="drawer-overlay" id="drawer-overlay" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-titulo" hidden>
+    <div class="drawer__head">
+      <h2 class="drawer__titulo" id="drawer-titulo">🛒 Tu pedido</h2>
+      <button type="button" class="drawer__cerrar" id="drawer-cerrar" aria-label="Cerrar carrito">×</button>
+    </div>
+    <div class="drawer__cuerpo">
+      <p class="drawer__vacio" id="drawer-vacio">Tu carrito está vacío. Agrega postres desde la galería.</p>
+      <ul class="drawer__items" id="drawer-items"></ul>
+      <div class="drawer__totales" id="drawer-totales" hidden>
+        <div class="drawer__linea"><span>Subtotal</span><span id="drawer-subtotal">$0</span></div>
+        <div class="drawer__linea"><span>Envío</span><span>Por confirmar</span></div>
+        <div class="drawer__linea drawer__linea--total"><span>Total</span><span id="drawer-total">$0</span></div>
+      </div>
+
+      <form id="form-carrito" novalidate>
+        <label for="c-nombre">Tu nombre *</label>
+        <input id="c-nombre" name="nombre" type="text" placeholder="Escribe tu nombre" autocomplete="name" required>
+
+        <label for="c-telefono">Teléfono *</label>
+        <input id="c-telefono" name="telefono" type="tel" placeholder="300 000 0000" autocomplete="tel" required>
+
+        <label for="c-direccion">Dirección de entrega *</label>
+        <input id="c-direccion" name="direccion" type="text" placeholder="Barrio, calle, casa/apto" autocomplete="street-address" required>
+
+        <label for="c-notas">Notas (opcional)</label>
+        <textarea id="c-notas" name="notas" rows="2" placeholder="Ej. sin azúcar, para las 6 pm..."></textarea>
+      </form>
+    </div>
+    <div class="drawer__pie">
+      <button type="button" class="btn btn--primary" id="btn-enviar"><svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-.5 0-1 .2-1.4.6L8 5.2c-.3.3-.8.3-1.1 0L5.5 4c-.6-.6-1.6 0-1.4.8.7 3 2.7 7.6 5.4 11.6 1.4 2 2.5 3.3 3.5 3.3s2.1-1.3 3.5-3.3c2.7-4 4.7-8.6 5.4-11.6.2-.8-.8-1.4-1.4-.8l-1.4 1.2c-.3.3-.8.3-1.1 0L13.4 2.6C13 2.2 12.5 2 12 2z"/><circle cx="12" cy="12" r="1.5" fill="#e63950"/><circle cx="9" cy="10" r="1" fill="#e63950"/><circle cx="15" cy="10" r="1" fill="#e63950"/><circle cx="10" cy="14" r="1" fill="#e63950"/><circle cx="14" cy="14" r="1" fill="#e63950"/></svg> Pedir por WhatsApp</button>
+      <button type="button" class="btn btn--ghost" id="btn-vaciar">Vaciar carrito</button>
+      <p class="pedido__msg" id="pedido-msg" role="status" aria-live="polite"></p>
+    </div>
+  </aside>
 
   <!-- Sprites de iconos SVG -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">

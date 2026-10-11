@@ -48,9 +48,10 @@ function pintar() {
   pintarRedes();
   pintarGaleria();
   pintarControlesCarrusel();
-  pintarSelect();
   inyectarJSONLD();
   pintarFlotante();
+  cargarCarrito();
+  pintarCarrito();
   document.title = DATA.marca.nombre + " — " + DATA.marca.eslogan;
 }
 
@@ -100,18 +101,41 @@ function pintarGaleria() {
         <p class="prod__meta">Alérgenos: ${esc((p.alergenos || []).join(", ")) || "ninguno"}</p>
         <div class="prod__pie">
           <span class="prod__precio">${pesos(p.precio)}</span>
-          <button type="button" class="btn btn--primary" data-pedir="${esc(p.id)}">Pedir</button>
+          <div class="prod__qty" aria-label="Cantidad de ${esc(p.nombre)}">
+            <button type="button" data-qty="-1" aria-label="Disminuir cantidad de ${esc(p.nombre)}">−</button>
+            <span class="qty-val">1</span>
+            <button type="button" data-qty="1" aria-label="Aumentar cantidad de ${esc(p.nombre)}">+</button>
+          </div>
         </div>
+        <button type="button" class="btn btn--primary btn--agregar" data-agregar="${esc(p.id)}">🛒 Agregar</button>
+        <button type="button" class="btn--directo" data-directo="${esc(p.id)}">Pedir solo este →</button>
       </div>
     </article>`).join("");
 
-  gal.querySelectorAll("[data-pedir]").forEach((b) => {
+  // Selector de cantidad dentro de cada tarjeta
+  gal.querySelectorAll("[data-qty]").forEach((b) => {
     b.addEventListener("click", () => {
-      const sel = document.getElementById("p-sabor");
-      sel.value = b.dataset.pedir;
-      document.getElementById("pedido").scrollIntoView({ behavior: "smooth" });
-      document.getElementById("p-cantidad").focus({ preventScroll: true });
+      const val = b.closest(".prod__qty").querySelector(".qty-val");
+      const n = Math.min(20, Math.max(1, parseInt(val.textContent, 10) + parseInt(b.dataset.qty, 10)));
+      val.textContent = n;
     });
+  });
+
+  // Agregar al carrito
+  gal.querySelectorAll("[data-agregar]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const id = b.dataset.agregar;
+      const qty = parseInt(b.closest(".prod").querySelector(".qty-val").textContent, 10);
+      agregarAlCarrito(id, qty);
+      const orig = b.textContent;
+      b.textContent = "✓ Agregado";
+      setTimeout(() => { b.textContent = orig; }, 1500);
+    });
+  });
+
+  // Pedir solo este producto (respaldo directo)
+  gal.querySelectorAll("[data-directo]").forEach((b) => {
+    b.addEventListener("click", () => pedirDirecto(b.dataset.directo));
   });
 }
 
@@ -184,13 +208,6 @@ function pintarControlesCarrusel() {
   });
 }
 
-/* ---- Select de sabores (desde data.json) ---- */
-function pintarSelect() {
-  const sel = document.getElementById("p-sabor");
-  sel.innerHTML = '<option value="">Selecciona un sabor</option>' +
-    DATA.productos.map((p) => `<option value="${esc(p.id)}">${esc(p.nombreCompleto)} — ${pesos(p.precio)}</option>`).join("");
-}
-
 /* ---- JSON-LD de productos (MenuItem) para SEO ---- */
 function inyectarJSONLD() {
   const ld = {
@@ -214,45 +231,235 @@ function inyectarJSONLD() {
   document.head.appendChild(s);
 }
 
-/* ---- Formulario → WhatsApp ---- */
-function enviarPedido(ev) {
-  ev.preventDefault();
+/* ---- Carrito: estado, persistencia y drawer ---- */
+let carrito = [];
+let carritoMemoria = [];
+const CART_KEY = "snoopy-cart";
+
+function productoDe(id) { return DATA.productos.find((p) => p.id === id); }
+function itemDe(id) { return carrito.find((c) => c.id === id); }
+function totalCarrito() {
+  return carrito.reduce((s, c) => s + (productoDe(c.id) ? productoDe(c.id).precio : 0) * c.cantidad, 0);
+}
+function contarProductos() {
+  return carrito.reduce((s, c) => s + c.cantidad, 0);
+}
+
+function cargarCarrito() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    carrito = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    carrito = carritoMemoria;
+  }
+}
+function guardarCarrito() {
+  try { localStorage.setItem(CART_KEY, JSON.stringify(carrito)); }
+  catch (e) { carritoMemoria = carrito.slice(); }
+}
+
+function agregarAlCarrito(id, cantidad) {
+  const item = itemDe(id);
+  if (item) item.cantidad += cantidad;
+  else carrito.push({ id, cantidad });
+  guardarCarrito();
+  pintarCarrito();
+  toast("✅ Agregado al carrito");
+}
+function cambiarCantidad(id, delta) {
+  const item = itemDe(id);
+  if (!item) return;
+  item.cantidad += delta;
+  if (item.cantidad <= 0) carrito = carrito.filter((c) => c.id !== id);
+  guardarCarrito();
+  pintarCarrito();
+}
+function quitarDelCarrito(id) {
+  carrito = carrito.filter((c) => c.id !== id);
+  guardarCarrito();
+  pintarCarrito();
+}
+function vaciarCarrito() {
+  if (!carrito.length) return;
+  if (!window.confirm("¿Vaciar el carrito?")) return;
+  carrito = [];
+  guardarCarrito();
+  pintarCarrito();
+}
+
+function pintarCarrito() {
+  const lista = document.getElementById("drawer-items");
+  const vacio = document.getElementById("drawer-vacio");
+  const totales = document.getElementById("drawer-totales");
+  const floatBtn = document.getElementById("cart-float");
+  if (!lista) return;
+
+  const total = totalCarrito();
+  const n = contarProductos();
+
+  lista.innerHTML = carrito.map((c) => {
+    const p = productoDe(c.id);
+    if (!p) return "";
+    return `
+      <li class="drawer__item">
+        <img class="drawer__item-img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" width="48" height="48">
+        <div class="drawer__item-info">
+          <p class="drawer__item-nombre">${esc(p.nombre)}</p>
+          <span class="drawer__item-precio">${pesos(p.precio * c.cantidad)}</span>
+        </div>
+        <div class="drawer__qty">
+          <button type="button" data-qty="-1" data-id="${esc(p.id)}" aria-label="Disminuir cantidad de ${esc(p.nombre)}">−</button>
+          <span class="qty-val">${c.cantidad}</span>
+          <button type="button" data-qty="1" data-id="${esc(p.id)}" aria-label="Aumentar cantidad de ${esc(p.nombre)}">+</button>
+        </div>
+        <button type="button" class="drawer__item-del" data-del="${esc(p.id)}" aria-label="Eliminar ${esc(p.nombre)} del carrito">×</button>
+      </li>`;
+  }).join("");
+
+  vacio.hidden = carrito.length > 0;
+  totales.hidden = carrito.length === 0;
+  document.getElementById("drawer-subtotal").textContent = pesos(total);
+  document.getElementById("drawer-total").textContent = pesos(total);
+
+  if (floatBtn) {
+    floatBtn.classList.toggle("is-hidden", carrito.length === 0);
+    floatBtn.innerHTML = "🛒 " + n + (n === 1 ? " producto" : " productos") + " · " + pesos(total);
+  }
+}
+
+/* ---- Drawer: abrir/cerrar ---- */
+let drawerTrigger = null;
+function abrirDrawer() {
+  const overlay = document.getElementById("drawer-overlay");
+  const drawer = document.getElementById("drawer");
+  drawerTrigger = document.activeElement;
+  overlay.hidden = false;
+  drawer.hidden = false;
+  requestAnimationFrame(() => {
+    overlay.classList.add("is-open");
+    drawer.classList.add("is-open");
+  });
+  setTimeout(() => { const f = document.getElementById("c-nombre"); if (f) f.focus(); }, 320);
+}
+function cerrarDrawer() {
+  const overlay = document.getElementById("drawer-overlay");
+  const drawer = document.getElementById("drawer");
+  overlay.classList.remove("is-open");
+  drawer.classList.remove("is-open");
+  setTimeout(() => {
+    overlay.hidden = true;
+    drawer.hidden = true;
+    if (drawerTrigger && drawerTrigger.focus) drawerTrigger.focus();
+  }, 300);
+}
+
+/* ---- Toast ---- */
+let toastTimer = null;
+function toast(texto) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    t.className = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = texto;
+  t.classList.add("is-visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("is-visible"), 1800);
+}
+
+/* ---- Pedir solo este producto (respaldo directo) ---- */
+function pedirDirecto(id) {
+  const p = productoDe(id);
+  if (!p) return;
+  const texto = "Hola, quiero hacer un pedido 😊\n\n• 1× " + p.nombreCompleto + " - " + pesos(p.precio);
+  window.open("https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent(texto), "_blank", "noopener");
+}
+
+/* ---- Enviar pedido del carrito por WhatsApp ---- */
+function enviarPedidoCarrito() {
   const msg = document.getElementById("pedido-msg");
-  const datos = Object.fromEntries(new FormData(ev.target).entries());
+
+  if (!carrito.length) {
+    msg.className = "pedido__msg err";
+    msg.textContent = "Tu carrito está vacío. Agrega postres primero.";
+    return;
+  }
+
+  const nombre = document.getElementById("c-nombre").value.trim();
+  const telefono = document.getElementById("c-telefono").value.trim();
+  const direccion = document.getElementById("c-direccion").value.trim();
+  const notas = document.getElementById("c-notas").value.trim();
 
   const faltantes = [];
-  if (!datos.nombre) faltantes.push("nombre");
-  if (!datos.telefono) faltantes.push("teléfono");
-  if (!datos.sabor) faltantes.push("sabor");
-  if (!datos.direccion) faltantes.push("dirección");
-
+  if (!nombre) faltantes.push("nombre");
+  if (!telefono) faltantes.push("teléfono");
+  if (!direccion) faltantes.push("dirección");
   if (faltantes.length) {
     msg.className = "pedido__msg err";
     msg.textContent = "Falta completar: " + faltantes.join(", ") + ".";
     return;
   }
 
-  const producto = DATA.productos.find((p) => p.id === datos.sabor);
-  const sabor = producto ? producto.nombreCompleto : datos.sabor;
+  const lineas = carrito.map((c) => {
+    const p = productoDe(c.id);
+    return "• " + c.cantidad + "× " + (p ? p.nombreCompleto : c.id) + " - " + pesos((p ? p.precio : 0) * c.cantidad);
+  });
   const partes = [
-    "Hola, soy " + datos.nombre.trim(),
-    "Tel: " + datos.telefono.trim(),
-    "Quiero " + datos.cantidad + " × " + sabor,
-    "Dirección: " + datos.direccion.trim()
+    "Hola, soy " + nombre + ". Quiero:",
+    lineas.join("\n"),
+    "Total: " + pesos(totalCarrito()),
+    "Tel: " + telefono,
+    "Dirección: " + direccion
   ];
-  if (datos.notas.trim()) partes.push("Notas: " + datos.notas.trim());
+  if (notas) partes.push("Notas: " + notas);
 
-  const texto = partes.join(". ") + ".";
-  const url = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent(texto);
-
-  // Respaldo del pedido por si el usuario recarga antes de confirmar en WhatsApp.
-  try {
-    localStorage.setItem("ps-snoopy-ultimo-pedido", JSON.stringify({ ...datos, fecha: new Date().toISOString() }));
-  } catch (e) { /* modo privado: se ignora */ }
-
+  const url = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent(partes.join("\n"));
   msg.className = "pedido__msg ok";
   msg.innerHTML = 'Abriendo WhatsApp… Si no abre, <a href="' + url + '" target="_blank" rel="noopener">toca aquí</a>.';
   window.open(url, "_blank", "noopener");
+}
+
+/* ---- Init: listeners del carrito/drawer ---- */
+function initCarrito() {
+  const abrir = document.getElementById("btn-abrir-carrito");
+  const float = document.getElementById("cart-float");
+  const cerrar = document.getElementById("drawer-cerrar");
+  const overlay = document.getElementById("drawer-overlay");
+  const enviar = document.getElementById("btn-enviar");
+  const vaciar = document.getElementById("btn-vaciar");
+  const items = document.getElementById("drawer-items");
+
+  if (abrir) abrir.addEventListener("click", abrirDrawer);
+  if (float) float.addEventListener("click", abrirDrawer);
+  if (cerrar) cerrar.addEventListener("click", cerrarDrawer);
+  if (overlay) overlay.addEventListener("click", cerrarDrawer);
+  if (enviar) enviar.addEventListener("click", enviarPedidoCarrito);
+  if (vaciar) vaciar.addEventListener("click", vaciarCarrito);
+
+  if (items) {
+    items.addEventListener("click", (e) => {
+      const qtyBtn = e.target.closest("[data-qty][data-id]");
+      if (qtyBtn) { cambiarCantidad(qtyBtn.dataset.id, parseInt(qtyBtn.dataset.qty, 10)); return; }
+      const delBtn = e.target.closest("[data-del]");
+      if (delBtn) quitarDelCarrito(delBtn.dataset.del);
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    const drawer = document.getElementById("drawer");
+    if (!drawer.classList.contains("is-open")) return;
+    if (e.key === "Escape") { cerrarDrawer(); return; }
+    if (e.key === "Tab") {
+      const focusables = drawer.querySelectorAll("button, input, textarea, a[href]");
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+      else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+    }
+  });
 }
 
 /* ---- Hero: si el video falla, ocultarlo para que se vea el degradado ---- */
@@ -397,9 +604,9 @@ function initScrollSpy() {
 /* ---- Arranque ---- */
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("anio").textContent = new Date().getFullYear();
-  document.getElementById("form-pedido").addEventListener("submit", enviarPedido);
   vigilarVideo();
   crearParticulas();
   initScrollSpy();
+  initCarrito();
   cargarDatos();
 });
