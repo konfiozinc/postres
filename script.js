@@ -419,6 +419,15 @@ function enviarPedidoCarrito() {
   msg.className = "pedido__msg ok";
   msg.innerHTML = 'Abriendo WhatsApp… Si no abre, <a href="' + url + '" target="_blank" rel="noopener">toca aquí</a>.';
   window.open(url, "_blank", "noopener");
+
+  // Vaciar el carrito tras abrir WhatsApp
+  setTimeout(() => {
+    carrito = [];
+    guardarCarrito();
+    pintarCarrito();
+    cerrarDrawer();
+    toast("✅ Pedido enviado. ¡Gracias!");
+  }, 1000);
 }
 
 /* ---- Init: listeners del carrito/drawer ---- */

@@ -62,17 +62,16 @@ img { max-width: 100%; display: block; }
 
 /* ---- HERO ---- */
 .hero {
-  position: relative; min-height: 38vh; max-height: 45vh;
-  display: flex; flex-direction: column; justify-content: flex-end;
+  position: relative; min-height: 40vh; max-height: 48vh;
+  display: block;
   border-radius: 0 0 28px 28px; overflow: hidden; isolation: isolate;
-  padding-bottom: 24px;
 }
 .hero__bg {
   position: absolute; inset: 0; z-index: -2;
   background-color: var(--rosa-claro); /* respaldo si la imagen no carga */
   background-image: url("assets/hero-banner.webp");
   background-size: cover;
-  background-position: center;
+  background-position: center 20%;
   animation: kenburns 18s ease-in-out infinite alternate;
   transform-origin: center center;
   will-change: transform;
@@ -99,12 +98,10 @@ img { max-width: 100%; display: block; }
   position: absolute; inset: 0; z-index: 0;
   background: linear-gradient(180deg, rgba(74,44,42,.05) 0%, rgba(74,44,42,.55) 100%);
 }
-.hero__content {
-  position: relative; z-index: 1; padding: 16px 24px; width: 100%;
-  color: #fff; text-align: center;
+.hero .hero__cta {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  padding: 10px 22px; font-size: 15px; white-space: nowrap; width: auto; z-index: 10;
 }
-.hero__cta { padding: 12px 28px; font-size: 16px; }
-.hero .btn { width: 100%; max-width: 320px; }
 
 /* Partículas flotantes del hero (canvas) */
 .particles {
