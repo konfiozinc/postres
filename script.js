@@ -409,7 +409,7 @@ function enviarPedidoCarrito() {
   const partes = [
     "Hola, soy " + nombre + ". Quiero:",
     lineas.join("\n"),
-    "Total: " + pesos(totalCarrito()),
+    "*Total: " + pesos(totalCarrito()) + "*",
     "Tel: " + telefono,
     "Dirección: " + direccion
   ];

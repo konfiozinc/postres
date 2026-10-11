@@ -62,8 +62,10 @@ img { max-width: 100%; display: block; }
 
 /* ---- HERO ---- */
 .hero {
-  position: relative; min-height: 50vh; max-height: 60vh; display: flex; align-items: flex-end;
+  position: relative; min-height: 38vh; max-height: 45vh;
+  display: flex; flex-direction: column; justify-content: flex-end;
   border-radius: 0 0 28px 28px; overflow: hidden; isolation: isolate;
+  padding-bottom: 24px;
 }
 .hero__bg {
   position: absolute; inset: 0; z-index: -2;
@@ -98,22 +100,10 @@ img { max-width: 100%; display: block; }
   background: linear-gradient(180deg, rgba(74,44,42,.05) 0%, rgba(74,44,42,.55) 100%);
 }
 .hero__content {
-  position: relative; z-index: 1; padding: 34px 24px 40px; width: 100%;
+  position: relative; z-index: 1; padding: 16px 24px; width: 100%;
   color: #fff; text-align: center;
 }
-.hero__content h1 {
-  color: #fff; font-size: 44px; font-weight: 700; line-height: 1.05;
-  text-shadow: 0 2px 12px rgba(74,44,42,.35);
-}
-.hero__title {
-  animation: zoomTitulo 4s ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes zoomTitulo {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.05); }
-}
-.hero__slogan { font-size: 18px; margin: 10px 0 22px; color: #fff; }
+.hero__cta { padding: 12px 28px; font-size: 16px; }
 .hero .btn { width: 100%; max-width: 320px; }
 
 /* Partículas flotantes del hero (canvas) */
@@ -360,7 +350,7 @@ img { max-width: 100%; display: block; }
 }
 @media (min-width: 768px) {
   .prod { flex: 0 0 calc((100% - 28px) / 3); }
-  .hero { min-height: 60vh; max-height: 70vh; }
+  .hero { min-height: 55vh; max-height: 65vh; }
   .wa-float { right: max(20px, calc((100vw - 560px) / 2 + 20px)); }
   .cart-float { right: max(20px, calc((100vw - 560px) / 2 + 20px)); }
 }
@@ -376,5 +366,5 @@ img { max-width: 100%; display: block; }
 
 /* Accesibilidad: desactiva animaciones si el usuario prefiere menos movimiento */
 @media (prefers-reduced-motion: reduce) {
-  .hero__bg, .hero__bg::after, .hero__title, .wa-float { animation: none !important; }
+  .hero__bg, .hero__bg::after, .wa-float { animation: none !important; }
 }
