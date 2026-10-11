@@ -62,16 +62,17 @@ img { max-width: 100%; display: block; }
 
 /* ---- HERO ---- */
 .hero {
-  position: relative; min-height: 40vh; max-height: 48vh;
+  position: relative; min-height: 55vh; max-height: 65vh;
   display: block;
   border-radius: 0 0 28px 28px; overflow: hidden; isolation: isolate;
 }
 .hero__bg {
   position: absolute; inset: 0; z-index: -2;
-  background-color: var(--rosa-claro); /* respaldo si la imagen no carga */
+  background-color: #f5e6d3; /* crema: franjas cuando la imagen no llena */
   background-image: url("assets/hero-banner.webp");
-  background-size: cover;
-  background-position: center 20%;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
   animation: kenburns 18s ease-in-out infinite alternate;
   transform-origin: center center;
   will-change: transform;
@@ -85,7 +86,7 @@ img { max-width: 100%; display: block; }
 }
 @keyframes kenburns {
   0%   { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.18) translate(-2%, -1.5%); }
+  100% { transform: scale(1.05) translate(-1%, -1%); }
 }
 @keyframes glow {
   0%   { opacity: 0.3; transform: scale(1); }
