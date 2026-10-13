@@ -44,8 +44,8 @@
     },
     {
       "id": "maracuya",
-      "nombre": "Maracuyá",
-      "nombreCompleto": "Caramelo, crema y maracuyá",
+      "nombre": "Postre de maracuyá",
+      "nombreCompleto": "Postre de maracuyá",
       "descripcion": "Caramelo con maracuyá",
       "precio": 8000,
       "alergenos": ["Lácteos"],
@@ -53,8 +53,8 @@
     },
     {
       "id": "oreo",
-      "nombre": "Oreo",
-      "nombreCompleto": "Caramelo, crema y Oreo",
+      "nombre": "Postre de Oreo",
+      "nombreCompleto": "Postre de Oreo",
       "descripcion": "Caramelo con Oreo",
       "precio": 8000,
       "alergenos": ["Lácteos", "gluten"],
@@ -62,8 +62,8 @@
     },
     {
       "id": "mango",
-      "nombre": "Mango",
-      "nombreCompleto": "Caramelo, crema y mango",
+      "nombre": "Postre de mango",
+      "nombreCompleto": "Postre de mango",
       "descripcion": "Caramelo con mango",
       "precio": 8000,
       "alergenos": ["Lácteos"],

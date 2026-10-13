@@ -22,9 +22,9 @@ const FALLBACK = {
     { id: "crema",     nombre: "Fresas con crema",     nombreCompleto: "Fresas con crema",     descripcion: "Fresas frescas y crema suave", precio: 10000, imagen: "assets/postre-fresas-crema.webp", alergenos: ["Lácteos"] },
     { id: "chocolate", nombre: "Fresas con chocolate", nombreCompleto: "Fresas con chocolate", descripcion: "Chocolate y trocitos crocantes", precio: 10000, imagen: "assets/postre-fresas-chocolate.webp", alergenos: ["Lácteos"] },
     { id: "caramelo",  nombre: "Caramelo y galleta",   nombreCompleto: "Caramelo y galleta",   descripcion: "Caramelo y galleta crocante", precio: 10000, imagen: "assets/postre-fresas-caramelo.webp", alergenos: ["Lácteos", "gluten"] },
-    { id: "maracuya",  nombre: "Maracuyá",             nombreCompleto: "Caramelo, crema y maracuyá", descripcion: "Caramelo con maracuyá", precio: 8000, imagen: "assets/postre-fresas-maracuya.webp", alergenos: ["Lácteos"] },
-    { id: "oreo",      nombre: "Oreo",                 nombreCompleto: "Caramelo, crema y Oreo", descripcion: "Caramelo con Oreo", precio: 8000, imagen: "assets/postre-fresas-oreo.webp", alergenos: ["Lácteos", "gluten"] },
-    { id: "mango",     nombre: "Mango",                nombreCompleto: "Caramelo, crema y mango", descripcion: "Caramelo con mango", precio: 8000, imagen: "assets/postre-fresas-mango.webp", alergenos: ["Lácteos"] }
+    { id: "maracuya",  nombre: "Postre de maracuyá",   nombreCompleto: "Postre de maracuyá", descripcion: "Caramelo con maracuyá", precio: 8000, imagen: "assets/postre-fresas-maracuya.webp", alergenos: ["Lácteos"] },
+    { id: "oreo",      nombre: "Postre de Oreo",       nombreCompleto: "Postre de Oreo", descripcion: "Caramelo con Oreo", precio: 8000, imagen: "assets/postre-fresas-oreo.webp", alergenos: ["Lácteos", "gluten"] },
+    { id: "mango",     nombre: "Postre de mango",      nombreCompleto: "Postre de mango", descripcion: "Caramelo con mango", precio: 8000, imagen: "assets/postre-fresas-mango.webp", alergenos: ["Lácteos"] }
   ]
 };
 
