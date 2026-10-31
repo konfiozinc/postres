@@ -238,6 +238,33 @@ function servir() {
   chk("la interfaz sigue en pie", m4.hero && m4.pie);
   await p4.close();
 
+  /* ---------- 5. seguridad: inyección en el formulario y no-envío ---------- */
+  console.log("\n=== 5. Seguridad del formulario");
+  const p5 = await navegador.newPage({ viewport: { width: 900, height: 900 } });
+  const popups5 = [];
+  p5.on("popup", async (x) => { popups5.push(x.url()); await x.close().catch(() => {}); });
+  await p5.goto(URL, { waitUntil: "networkidle" });
+  await p5.waitForSelector(".prod");
+  await p5.evaluate(() => { document.querySelector('[data-agregar]').click(); });
+  await p5.click("#cart-float");
+  await p5.waitForTimeout(400);
+  await p5.fill("#c-nombre", '<img src=x onerror="window.__xss=1">');
+  await p5.fill("#c-telefono", "3001112233");
+  await p5.fill("#c-direccion", '<script>window.__xss2=1</script> Calle 10 #5-20');
+  await p5.fill("#c-notas", '"><svg onload="window.__xss3=1">');
+  await p5.click("#btn-enviar");
+  await p5.waitForTimeout(500);
+  const seg = await p5.evaluate(() => ({
+    xss: [window.__xss, window.__xss2, window.__xss3].filter(Boolean).length,
+    scriptInyectado: document.querySelectorAll('.drawer script, .drawer img[src="x"], .drawer svg[onload]').length,
+    previa: document.querySelector("#mensaje-preview").textContent,
+    listo: !document.querySelector("#paso-listo").hidden,
+  }));
+  chk("el formulario no ejecuta código inyectado", seg.xss === 0 && seg.scriptInyectado === 0, "xss=" + seg.xss + " nodos=" + seg.scriptInyectado);
+  chk("el texto se muestra literal en la vista previa", seg.previa.includes('<img src=x onerror="window.__xss=1">'), seg.previa.slice(0, 40));
+  chk("no se abrió WhatsApp durante las pruebas (0 pedidos reales)", popups5.length === 0, popups5.length + " pestañas");
+  await p5.close();
+
   await navegador.close();
   srv.close();
   console.log("\nRESULTADO KZ-SNOOPY-002: PASS " + ok + " · FALLA " + ko);
