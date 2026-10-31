@@ -165,7 +165,7 @@ Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `prue
 
 ## 8. Recomendación de publicación
 
-**Publicado el 2-nov-2026** tras la autorización del CTO, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión actual **sí afirma un envío que no puede verificar**. Pasos sugeridos, una vez el CTO autorice:
+**Publicado el 2-nov-2026** tras la autorización del CTO, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión anterior **afirmaba un envío que no podía verificar**. Procedimiento ejecutado:
 
 1. `git push origin kz-snoopy-002` y revisión de la rama.
 2. Merge a `main` (fast-forward o `--no-ff`).
@@ -173,4 +173,4 @@ Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `prue
 4. Verificar en producción: `https://konfiozinc.github.io/postres/` en móvil y escritorio; preparar un pedido de prueba **sin pulsar «Enviar»** en WhatsApp.
 5. Si algo falla, `git revert` del merge devuelve la versión anterior (el sitio antiguo queda en el historial).
 
-Queda **una decisión de negocio** antes o después de publicar: qué hacer con «Haz tu pedido» mientras el envío sea manual. La versión actual lo explica en la propia interfaz, que es lo mínimo honesto.
+URL comprobada: **https://konfiozinc.github.io/postres/** · Sigue en pie **una decisión de negocio**: mientras el envío sea manual, el sitio no puede confirmar que el negocio recibió el pedido y lo dice explícitamente en la interfaz. Una confirmación real requeriría un canal verificable (WhatsApp Business API o backend) con autorización aparte.
