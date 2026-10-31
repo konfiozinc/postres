@@ -110,11 +110,8 @@ Notas honestas: el rendimiento móvil se mantiene bajo (49) por la CPU emulada d
 
 Rama `kz-snoopy-002`, **subida a GitHub** (`origin/kz-snoopy-002`). `main` **no** se tocó y el sitio **no** se publicó:
 
-- `git log origin/kz-snoopy-002` (3 commits):
-
-1. *fix(kz-snoopy-002): pedido por WhatsApp en tres estados sin vaciado automático, validación de catálogo y carrito, rediseño responsive con contraste AA, pruebas y entrega*
-2. *test(kz-snoopy-002): pruebas de seguridad del formulario (sin inyección, sin pedidos reales) y recuento final en el informe*
-3. *docs(kz-snoopy-002): informe con pruebas de seguridad y recuento definitivo*
+- `git log origin/kz-snoopy-002` lista los commits de la rama, con mensajes descriptivos.
+- El primero contiene el cambio funcional (pedido, validación, rediseño); los siguientes añaden las pruebas de seguridad y este informe.
 
 Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `pruebas/nucleo.test.js`, `pruebas/e2e.cjs`, `docs/KZ-SNOOPY-002-ENTREGA.md` y `docs/capturas/` (8 imágenes).
 
