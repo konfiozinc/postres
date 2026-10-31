@@ -167,10 +167,10 @@ Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `prue
 
 **Publicado el 2-nov-2026** tras la autorización del CTO, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión anterior **afirmaba un envío que no podía verificar**. Procedimiento ejecutado:
 
-1. `git push origin kz-snoopy-002` y revisión de la rama.
-2. Merge a `main` (fast-forward o `--no-ff`).
-3. `git push origin main` → GitHub Pages publica solo.
-4. Verificar en producción: `https://konfiozinc.github.io/postres/` en móvil y escritorio; preparar un pedido de prueba **sin pulsar «Enviar»** en WhatsApp.
-5. Si algo falla, `git revert` del merge devuelve la versión anterior (el sitio antiguo queda en el historial).
+1. Verificación de la rama remota: `origin/kz-snoopy-002` contenía `7c7262a` y `main` no tenía cambios divergentes.
+2. Integración con **`git merge --no-ff`** → commit de integración `89564c9`; historial completo conservado.
+3. `git push origin main` → GitHub Pages publicó solo.
+4. Verificación en producción: **40/40** comprobaciones funcionales, de seguridad y de responsive, más Lighthouse móvil y escritorio (§5).
+5. **Reversión si hiciera falta:** `git revert -m 1 89564c9 && git push origin main` restaura la versión anterior en un par de minutos, sin tocar `data.json`.
 
 URL comprobada: **https://konfiozinc.github.io/postres/** · Sigue en pie **una decisión de negocio**: mientras el envío sea manual, el sitio no puede confirmar que el negocio recibió el pedido y lo dice explícitamente en la interfaz. Una confirmación real requeriría un canal verificable (WhatsApp Business API o backend) con autorización aparte.
