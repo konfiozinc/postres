@@ -1,109 +1,268 @@
 /* ============================================================
    Postres Snoopy — script.js
-   - Carga data.json (con respaldo embebido si falla la petición).
-   - Renderiza la galería y el <select> de sabores.
-   - Construye el mensaje de WhatsApp dinámicamente.
-   - Guarda el último pedido en localStorage.
+   - Carga y VALIDA data.json (sin inventar productos ni precios).
+   - Carrito saneado: cantidades enteras 1..20, ids del catálogo y
+     precios SIEMPRE tomados del catálogo (nunca de localStorage).
+   - Pedido en tres estados explícitos:
+       1) preparado        → mensaje armado, nada enviado
+       2) whatsapp abierto → se abrió WhatsApp, el negocio aún no responde
+       3) enviado por ti   → el cliente marcó que pulsó «Enviar»; queda
+                             PENDIENTE DE CONFIRMACIÓN DEL NEGOCIO
+     El carrito NO se vacía solo: solo con una acción explícita.
    ============================================================ */
 "use strict";
 
-// Respaldo por si data.json no carga (p. ej. abriendo el HTML con file://).
-// Debe coincidir con data.json; si editas los productos ahí, edita también aquí.
-const FALLBACK = {
-  marca: { nombre: "Postres Snoopy", eslogan: "Postres con amor, hechos para consentirte" },
-  contacto: { whatsapp: "573009981576" },
-  redes: [
-    { id: "instagram", nombre: "Instagram", url: "" },
-    { id: "tiktok",     nombre: "TikTok",     url: "" },
-    { id: "facebook",   nombre: "Facebook",   url: "" },
-    { id: "whatsapp",   nombre: "WhatsApp",   url: "https://wa.me/573009981576" }
-  ],
-  productos: [
-    { id: "crema",     nombre: "Fresas con crema",     nombreCompleto: "Fresas con crema",     descripcion: "Fresas frescas y crema suave", precio: 10000, imagen: "assets/postre-fresas-crema.webp", alergenos: ["Lácteos"] },
-    { id: "chocolate", nombre: "Fresas con chocolate", nombreCompleto: "Fresas con chocolate", descripcion: "Chocolate y trocitos crocantes", precio: 10000, imagen: "assets/postre-fresas-chocolate.webp", alergenos: ["Lácteos"] },
-    { id: "caramelo",  nombre: "Caramelo y galleta",   nombreCompleto: "Caramelo y galleta",   descripcion: "Caramelo y galleta crocante", precio: 10000, imagen: "assets/postre-fresas-caramelo.webp", alergenos: ["Lácteos", "gluten"] },
-    { id: "maracuya",  nombre: "Postre de maracuyá",   nombreCompleto: "Postre de maracuyá", descripcion: "Caramelo con maracuyá", precio: 8000, imagen: "assets/postre-fresas-maracuya.webp", alergenos: ["Lácteos"] },
-    { id: "oreo",      nombre: "Postre de Oreo",       nombreCompleto: "Postre de Oreo", descripcion: "Caramelo con Oreo", precio: 8000, imagen: "assets/postre-fresas-oreo.webp", alergenos: ["Lácteos", "gluten"] },
-    { id: "mango",     nombre: "Postre de mango",      nombreCompleto: "Postre de mango", descripcion: "Caramelo con mango", precio: 8000, imagen: "assets/postre-fresas-mango.webp", alergenos: ["Lácteos"] }
-  ]
-};
+const MAX_POR_ITEM = 20;
+const CATALOGO_MINIMO = 1;
+
+/* ---------------- utilidades puras (probadas en pruebas/nucleo.test.js) ---------------- */
+
+function esObjeto(v) { return v && typeof v === "object" && !Array.isArray(v); }
+
+function texto(v, max) {
+  if (typeof v !== "string") return "";
+  const t = v.trim().replace(/\s+/g, " ");
+  return max ? t.slice(0, max) : t;
+}
+
+/** Precio válido: entero positivo en pesos. Devuelve null si no lo es. */
+function precioValido(v) {
+  const n = typeof v === "string" ? Number(v.replace(/[^\d]/g, "")) : Number(v);
+  if (!Number.isFinite(n)) return null;
+  if (!Number.isInteger(n)) return null;
+  if (n <= 0 || n > 10000000) return null;
+  return n;
+}
+
+/** Cantidad válida: entero 1..MAX_POR_ITEM. */
+function cantidadValida(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.trunc(n);
+  if (i < 1) return null;
+  return Math.min(i, MAX_POR_ITEM);
+}
+
+/** Un producto solo existe si tiene id, nombre y precio válidos. */
+function normalizarProducto(p) {
+  if (!esObjeto(p)) return null;
+  const id = texto(p.id, 60);
+  const nombre = texto(p.nombre, 80);
+  const precio = precioValido(p.precio);
+  if (!id || !nombre || precio === null) return null;
+  const imagen = typeof p.imagen === "string" ? p.imagen.trim() : "";
+  return {
+    id,
+    nombre,
+    nombreCompleto: texto(p.nombreCompleto || p.nombre, 120),
+    descripcion: texto(p.descripcion, 200),
+    precio,
+    imagen: /^assets\/[\w./-]+$/.test(imagen) ? imagen : "",
+    alergenos: Array.isArray(p.alergenos) ? p.alergenos.map((a) => texto(a, 30)).filter(Boolean) : [],
+  };
+}
+
+/** Valida el documento completo de data.json. Nunca lanza. */
+function validarCatalogo(json) {
+  const avisos = [];
+  if (!esObjeto(json)) return { ok: false, marca: null, contacto: null, redes: [], productos: [], avisos: ["data.json no es un objeto válido"] };
+
+  const marcaRaw = esObjeto(json.marca) ? json.marca : {};
+  const marca = {
+    nombre: texto(marcaRaw.nombre, 80) || "Postres Snoopy",
+    eslogan: texto(marcaRaw.eslogan, 160),
+    ciudad: texto(marcaRaw.ciudad, 80),
+  };
+  if (!texto(marcaRaw.nombre, 80)) avisos.push("Falta el nombre de la marca; se usa el de respaldo.");
+
+  const contactoRaw = esObjeto(json.contacto) ? json.contacto : {};
+  const numero = texto(contactoRaw.whatsapp, 20).replace(/[^\d]/g, "");
+  const contacto = { whatsapp: numero.length >= 10 ? numero : "" };
+  if (!contacto.whatsapp) avisos.push("El WhatsApp del negocio falta o no es válido.");
+
+  const redes = Array.isArray(json.redes)
+    ? json.redes.filter(esObjeto).map((r) => ({
+        id: texto(r.id, 30),
+        nombre: texto(r.nombre, 40) || texto(r.id, 30),
+        url: /^https?:\/\//i.test(String(r.url || "")) ? String(r.url).trim() : "",
+      })).filter((r) => r.id)
+    : [];
+
+  const lista = Array.isArray(json.productos) ? json.productos : [];
+  if (!Array.isArray(json.productos)) avisos.push("data.json no trae una lista de productos.");
+
+  const productos = [], vistos = new Set();
+  lista.forEach((p, i) => {
+    const n = normalizarProducto(p);
+    if (!n) { avisos.push("Producto #" + (i + 1) + " ignorado: faltan id, nombre o precio válido."); return; }
+    if (vistos.has(n.id)) { avisos.push("Producto duplicado ignorado: " + n.id + "."); return; }
+    vistos.add(n.id);
+    if (!n.imagen) avisos.push("«" + n.nombre + "» no tiene una ruta de imagen válida.");
+    productos.push(n);
+  });
+
+  const ok = productos.length >= CATALOGO_MINIMO && !!contacto.whatsapp;
+  if (!productos.length) avisos.push("No hay ningún producto válido en data.json.");
+  return { ok, marca, contacto, redes, productos, avisos };
+}
+
+/** Sanea lo que venga de localStorage: ids del catálogo y cantidades 1..20. */
+function sanearCarrito(bruto, productos) {
+  const ids = new Set(productos.map((p) => p.id));
+  const mapa = new Map();
+  if (Array.isArray(bruto)) {
+    bruto.forEach((it) => {
+      if (!esObjeto(it)) return;
+      const id = texto(it.id, 60);
+      if (!ids.has(id)) return;                       // producto inexistente: se descarta
+      const c = cantidadValida(it.cantidad);
+      if (c === null) return;                         // cantidad inválida: se descarta
+      mapa.set(id, Math.min(MAX_POR_ITEM, (mapa.get(id) || 0) + c));
+    });
+  }
+  return [...mapa.entries()].map(([id, cantidad]) => ({ id, cantidad }));
+}
+
+function precioDe(id, productos) {
+  const p = productos.find((x) => x.id === id);
+  return p ? p.precio : 0;
+}
+
+function calcularTotal(carrito, productos) {
+  return carrito.reduce((s, c) => s + precioDe(c.id, productos) * c.cantidad, 0);
+}
+
+function contarProductos(carrito) {
+  return carrito.reduce((s, c) => s + c.cantidad, 0);
+}
+
+/** Validación del formulario con mensajes concretos por campo. */
+function validarFormulario(datos) {
+  const errores = {};
+  const nombre = texto(datos.nombre, 60);
+  const telefono = String(datos.telefono || "").replace(/[^\d]/g, "");
+  const direccion = texto(datos.direccion, 120);
+  const notas = texto(datos.notas, 300);
+
+  if (nombre.length < 2) errores.nombre = "Escribe tu nombre (mínimo 2 letras).";
+  if (telefono.length < 10) errores.telefono = "El teléfono debe tener al menos 10 dígitos.";
+  else if (telefono.length > 15) errores.telefono = "El teléfono tiene demasiados dígitos.";
+  if (direccion.length < 6) errores.direccion = "Escribe la dirección de entrega (mínimo 6 caracteres).";
+  if (notas.length > 300) errores.notas = "Las notas no pueden pasar de 300 caracteres.";
+
+  return { ok: Object.keys(errores).length === 0, errores, limpio: { nombre, telefono, direccion, notas } };
+}
+
+function pesos(n) { return "$" + Number(n || 0).toLocaleString("es-CO"); }
+
+/** Mensaje que se le entrega al cliente para que lo envíe él mismo. */
+function construirMensaje(datos, carrito, productos, marca) {
+  const lineas = carrito.map((c) => {
+    const p = productos.find((x) => x.id === c.id);
+    return "• " + c.cantidad + "× " + (p ? p.nombreCompleto || p.nombre : c.id) + " - " + pesos(precioDe(c.id, productos) * c.cantidad);
+  });
+  const partes = [
+    "Hola, soy " + datos.nombre + ". Quiero:",
+    lineas.join("\n"),
+    "*Total de productos: " + pesos(calcularTotal(carrito, productos)) + "*",
+    "Tel: " + datos.telefono,
+    "Dirección: " + datos.direccion,
+  ];
+  if (datos.notas) partes.push("Notas: " + datos.notas);
+  partes.push("(Envío y valor final por confirmar en el chat)");
+  return partes.join("\n");
+}
+
+function urlWhatsApp(numero, mensaje) {
+  const limpio = String(numero || "").replace(/[^\d]/g, "");
+  return "https://wa.me/" + limpio + "?text=" + encodeURIComponent(mensaje);
+}
+
+/* ---------------- parte que toca el DOM ---------------- */
 
 const $ = (s) => document.querySelector(s);
-const pesos = (n) => "$" + Number(n).toLocaleString("es-CO");
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-let DATA = FALLBACK;
+const CART_KEY = "snoopy-cart-v2";
+let CATALOGO = { marca: { nombre: "Postres Snoopy" }, contacto: { whatsapp: "" }, redes: [], productos: [] };
+let carrito = [];
+let estadoPedido = "inicial"; // inicial | preparado | whatsapp | enviado
+let mensajeActual = "";
 
-async function cargarDatos() {
+async function cargarCatalogo() {
+  let json = null;
   try {
     const res = await fetch("data.json", { cache: "no-cache" });
-    if (res.ok) DATA = await res.json();
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    json = await res.json();
   } catch (e) {
-    console.warn("Postres Snoopy: data.json no disponible, uso respaldo embebido.", e);
+    console.warn("Postres Snoopy: no se pudo leer data.json —", e.message);
   }
-  pintar();
+  const v = validarCatalogo(json);
+  CATALOGO = { marca: v.marca, contacto: v.contacto, redes: v.redes, productos: v.productos };
+
+  const aviso = $("#catalogo-aviso");
+  if (!v.ok) {
+    aviso.hidden = false;
+    aviso.className = "aviso-catalogo aviso-catalogo--error";
+    aviso.textContent = "No pudimos cargar el catálogo en este momento. Escríbenos por WhatsApp y te contamos los sabores disponibles.";
+  } else if (v.avisos.length) {
+    aviso.hidden = false;
+    aviso.className = "aviso-catalogo";
+    aviso.textContent = "Algunos productos no se pudieron mostrar. Escríbenos si no encuentras el tuyo.";
+    console.warn("Postres Snoopy · avisos del catálogo:", v.avisos);
+  } else {
+    aviso.hidden = true;
+  }
+  return v.ok;
 }
 
 function pintar() {
   pintarRedes();
   pintarGaleria();
-  pintarControlesCarrusel();
   inyectarJSONLD();
-  pintarFlotante();
-  cargarCarrito();
+  pintarFlotantes();
+  carrito = sanearCarrito(leerCarrito(), CATALOGO.productos);
+  guardarCarrito();
   pintarCarrito();
-  document.title = DATA.marca.nombre + " — " + DATA.marca.eslogan;
+  document.title = CATALOGO.marca.nombre + " — " + (CATALOGO.marca.eslogan || "Postres");
 }
 
-/* ---- Botón flotante de WhatsApp (se oculta cuando el form está visible) ---- */
-function pintarFlotante() {
-  const a = document.createElement("a");
-  a.className = "wa-float";
-  a.href = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent("Hola, quiero hacer un pedido 😊");
-  a.target = "_blank";
-  a.rel = "noopener";
-  a.setAttribute("aria-label", "Contactar por WhatsApp");
-  a.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg>';
-  document.body.appendChild(a);
-
-  const seccion = document.getElementById("pedido");
-  if (seccion && "IntersectionObserver" in window) {
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => a.classList.toggle("is-hidden", e.isIntersecting));
-    }, { threshold: 0.2 });
-    io.observe(seccion);
-  }
-}
-
-/* ---- Redes (quick nav): solo se enlaza la url que exista; las vacías quedan en "#" ---- */
 function pintarRedes() {
-  DATA.redes.forEach((r) => {
+  const conUrl = CATALOGO.redes.filter((r) => r.url);
+  const nav = $(".quicknav");
+  CATALOGO.redes.forEach((r) => {
     const el = document.getElementById("social-" + r.id);
-    if (el) {
-      el.href = r.url || "#";
-      el.classList.toggle("is-placeholder", !r.url && r.id !== "whatsapp");
-      el.setAttribute("aria-label", r.nombre);
-    }
+    if (!el) return;
+    if (!r.url) { el.hidden = true; return; }         // sin perfil: enlace oculto, nunca muerto
+    el.hidden = false;
+    el.href = r.url;
+    el.setAttribute("aria-label", r.nombre);
+    el.rel = "noopener";
+    el.target = "_blank";
   });
+  if (nav && nav.children.length === 1) nav.classList.add("quicknav--solo");
+  return conUrl.length;
 }
 
-/* ---- Galería de productos ---- */
 function pintarGaleria() {
-  const gal = document.getElementById("galeria");
-  gal.innerHTML = DATA.productos.map((p) => `
-    <article class="prod">
-      <img class="prod__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" width="720" height="960"
-           onerror="this.style.display='none';this.parentNode.querySelector('.prod__ph').style.display='flex'">
-      <span class="prod__ph" aria-hidden="true" style="display:none">🍓</span>
+  const gal = $("#galeria");
+  if (!CATALOGO.productos.length) { gal.innerHTML = ""; return; }
+  gal.innerHTML = CATALOGO.productos.map((p, i) => `
+    <article class="prod" data-id="${esc(p.id)}">
+      <div class="prod__figura">
+        <img class="prod__img" src="${esc(p.imagen || "assets/logo/logo-200.webp")}" alt="${esc(p.nombre)}"
+             width="720" height="900" loading="${i < 2 ? "eager" : "lazy"}" fetchpriority="${i === 0 ? "high" : "auto"}" decoding="async">
+        ${p.alergenos.length ? `<p class="prod__alergenos">Alérgenos: ${esc(p.alergenos.join(", "))}</p>` : ""}
+      </div>
       <div class="prod__body">
         <h3 class="prod__nombre">${esc(p.nombre)}</h3>
         <p class="prod__desc">${esc(p.descripcion)}</p>
-        <p class="prod__meta">Alérgenos: ${esc((p.alergenos || []).join(", ")) || "ninguno"}</p>
         <div class="prod__pie">
           <span class="prod__precio">${pesos(p.precio)}</span>
           <div class="prod__qty" aria-label="Cantidad de ${esc(p.nombre)}">
             <button type="button" data-qty="-1" aria-label="Disminuir cantidad de ${esc(p.nombre)}">−</button>
-            <span class="qty-val">1</span>
+            <span class="qty-val" aria-live="polite">1</span>
             <button type="button" data-qty="1" aria-label="Aumentar cantidad de ${esc(p.nombre)}">+</button>
           </div>
         </div>
@@ -112,118 +271,42 @@ function pintarGaleria() {
       </div>
     </article>`).join("");
 
-  // Selector de cantidad dentro de cada tarjeta
   gal.querySelectorAll("[data-qty]").forEach((b) => {
     b.addEventListener("click", () => {
       const val = b.closest(".prod__qty").querySelector(".qty-val");
-      const n = Math.min(20, Math.max(1, parseInt(val.textContent, 10) + parseInt(b.dataset.qty, 10)));
+      const n = cantidadValida(parseInt(val.textContent, 10) + parseInt(b.dataset.qty, 10)) || 1;
       val.textContent = n;
     });
   });
-
-  // Agregar al carrito
   gal.querySelectorAll("[data-agregar]").forEach((b) => {
     b.addEventListener("click", () => {
-      const id = b.dataset.agregar;
-      const qty = parseInt(b.closest(".prod").querySelector(".qty-val").textContent, 10);
-      agregarAlCarrito(id, qty);
-      const orig = b.textContent;
+      const cont = b.closest(".prod").querySelector(".qty-val");
+      agregar(b.dataset.agregar, cantidadValida(parseInt(cont.textContent, 10)) || 1);
       b.textContent = "✓ Agregado";
-      setTimeout(() => { b.textContent = orig; }, 1500);
+      setTimeout(() => { b.textContent = "🛒 Agregar"; }, 1500);
     });
   });
-
-  // Pedir solo este producto (respaldo directo)
   gal.querySelectorAll("[data-directo]").forEach((b) => {
     b.addEventListener("click", () => pedirDirecto(b.dataset.directo));
   });
 }
 
-/* ---- Controles del carrusel: flechas, dots y autoplay ---- */
-function pintarControlesCarrusel() {
-  const gal = document.getElementById("galeria");
-  const dots = document.getElementById("car-dots");
-  const prev = document.getElementById("car-prev");
-  const next = document.getElementById("car-next");
-  if (!gal || !dots || !prev || !next) return;
-
-  const cards = [...gal.children];
-  if (!cards.length) return;
-  const GAP = 14; // debe coincidir con .galeria { gap }
-  const paso = () => cards[0].getBoundingClientRect().width + GAP;
-
-  // Un dot por tarjeta
-  dots.innerHTML = "";
-  cards.forEach((c, i) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "car-dot";
-    b.setAttribute("role", "tab");
-    b.setAttribute("aria-label", "Ir a la diapositiva " + (i + 1));
-    b.addEventListener("click", () =>
-      c.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }));
-    dots.appendChild(b);
-  });
-
-  // Flechas
-  prev.addEventListener("click", () => gal.scrollBy({ left: -paso(), behavior: "smooth" }));
-  next.addEventListener("click", () => gal.scrollBy({ left: paso(), behavior: "smooth" }));
-
-  // Dot activo: la tarjeta cuyo centro está más cerca del centro visible
-  const actualizar = () => {
-    const centro = gal.getBoundingClientRect().left + gal.clientWidth / 2;
-    let idx = 0, mejor = Infinity;
-    cards.forEach((c, i) => {
-      const r = c.getBoundingClientRect();
-      const d = Math.abs(r.left + r.width / 2 - centro);
-      if (d < mejor) { mejor = d; idx = i; }
-    });
-    [...dots.children].forEach((d, i) => d.classList.toggle("is-active", i === idx));
-  };
-  gal.addEventListener("scroll", actualizar, { passive: true });
-  window.addEventListener("resize", actualizar);
-  actualizar();
-
-  // Autoplay: se omite si el usuario prefiere menos movimiento
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  let timer = null;
-  const arrancar = () => {
-    if (timer) return;
-    timer = setInterval(() => {
-      const fin = gal.scrollWidth - gal.clientWidth;
-      if (gal.scrollLeft >= fin - 4) gal.scrollTo({ left: 0, behavior: "smooth" });
-      else gal.scrollBy({ left: paso(), behavior: "smooth" });
-    }, 4000);
-  };
-  const parar = () => { if (timer) { clearInterval(timer); timer = null; } };
-
-  arrancar();
-  gal.addEventListener("mouseenter", parar);
-  gal.addEventListener("mouseleave", arrancar);
-  gal.addEventListener("focusin", parar);
-  gal.addEventListener("focusout", arrancar);
-  document.addEventListener("visibilitychange", () => {
-    document.hidden ? parar() : arrancar();
-  });
-}
-
-/* ---- JSON-LD de productos (MenuItem) para SEO ---- */
 function inyectarJSONLD() {
+  if (!CATALOGO.productos.length) return;
   const ld = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "name": "Postres de " + DATA.marca.nombre,
-    "itemListElement": DATA.productos.map((p, i) => ({
+    name: "Postres de " + CATALOGO.marca.nombre,
+    itemListElement: CATALOGO.productos.map((p, i) => ({
       "@type": "ListItem",
-      "position": i + 1,
-      "item": {
+      position: i + 1,
+      item: {
         "@type": "MenuItem",
-        "name": p.nombreCompleto,
-        "description": p.descripcion,
-        "offers": { "@type": "Offer", "price": String(p.precio), "priceCurrency": "COP" }
-      }
-    }))
+        name: p.nombreCompleto,
+        description: p.descripcion,
+        offers: { "@type": "Offer", price: String(p.precio), priceCurrency: "COP" },
+      },
+    })),
   };
   const s = document.createElement("script");
   s.type = "application/ld+json";
@@ -231,86 +314,84 @@ function inyectarJSONLD() {
   document.head.appendChild(s);
 }
 
-/* ---- Carrito: estado, persistencia y drawer ---- */
-let carrito = [];
-let carritoMemoria = [];
-const CART_KEY = "snoopy-cart";
-
-function productoDe(id) { return DATA.productos.find((p) => p.id === id); }
-function itemDe(id) { return carrito.find((c) => c.id === id); }
-function totalCarrito() {
-  return carrito.reduce((s, c) => s + (productoDe(c.id) ? productoDe(c.id).precio : 0) * c.cantidad, 0);
-}
-function contarProductos() {
-  return carrito.reduce((s, c) => s + c.cantidad, 0);
-}
-
-function cargarCarrito() {
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    carrito = raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    carrito = carritoMemoria;
+function pintarFlotantes() {
+  if (!$(".wa-float")) {
+    const a = document.createElement("a");
+    a.className = "wa-float";
+    a.href = CATALOGO.contacto.whatsapp ? "https://wa.me/" + CATALOGO.contacto.whatsapp : "#";
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.setAttribute("aria-label", "Contactar por WhatsApp");
+    a.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg>';
+    document.body.appendChild(a);
+  }
+  const seccion = document.getElementById("pedido");
+  const a = $(".wa-float");
+  if (seccion && a && "IntersectionObserver" in window) {
+    new IntersectionObserver((es) => es.forEach((e) => a.classList.toggle("is-hidden", e.isIntersecting)), { threshold: 0.2 }).observe(seccion);
   }
 }
+
+/* ---- carrito ---- */
+function leerCarrito() {
+  try { return JSON.parse(localStorage.getItem(CART_KEY) || "[]"); }
+  catch (e) { return []; }
+}
 function guardarCarrito() {
-  try { localStorage.setItem(CART_KEY, JSON.stringify(carrito)); }
-  catch (e) { carritoMemoria = carrito.slice(); }
+  try { localStorage.setItem(CART_KEY, JSON.stringify(sanearCarrito(carrito, CATALOGO.productos))); }
+  catch (e) { /* modo privado: seguimos en memoria */ }
 }
 
-function agregarAlCarrito(id, cantidad) {
-  const item = itemDe(id);
-  if (item) item.cantidad += cantidad;
-  else carrito.push({ id, cantidad });
+function agregar(id, cantidad) {
+  const p = CATALOGO.productos.find((x) => x.id === id);
+  if (!p) return;
+  const it = carrito.find((c) => c.id === id);
+  if (it) it.cantidad = Math.min(MAX_POR_ITEM, it.cantidad + (cantidadValida(cantidad) || 1));
+  else carrito.push({ id, cantidad: cantidadValida(cantidad) || 1 });
+  carrito = sanearCarrito(carrito, CATALOGO.productos);
   guardarCarrito();
   pintarCarrito();
   toast("✅ Agregado al carrito");
 }
 function cambiarCantidad(id, delta) {
-  const item = itemDe(id);
-  if (!item) return;
-  item.cantidad += delta;
-  if (item.cantidad <= 0) carrito = carrito.filter((c) => c.id !== id);
+  const it = carrito.find((c) => c.id === id);
+  if (!it) return;
+  it.cantidad = it.cantidad + delta;
+  if (it.cantidad <= 0) carrito = carrito.filter((c) => c.id !== id);
+  carrito = sanearCarrito(carrito, CATALOGO.productos);
   guardarCarrito();
   pintarCarrito();
 }
-function quitarDelCarrito(id) {
+function quitar(id) {
   carrito = carrito.filter((c) => c.id !== id);
-  guardarCarrito();
-  pintarCarrito();
+  guardarCarrito(); pintarCarrito();
 }
 function vaciarCarrito() {
-  if (!carrito.length) return;
-  if (!window.confirm("¿Vaciar el carrito?")) return;
-  carrito = [];
-  guardarCarrito();
-  pintarCarrito();
+  if (!carrito.length) { toast("El carrito ya está vacío"); return; }
+  if (!window.confirm("¿Vaciar el carrito? Se quitarán los productos de tu pedido.")) return;
+  carrito = []; guardarCarrito(); pintarCarrito(); reiniciarFlujo(); toast("Carrito vacío");
 }
 
 function pintarCarrito() {
-  const lista = document.getElementById("drawer-items");
-  const vacio = document.getElementById("drawer-vacio");
-  const totales = document.getElementById("drawer-totales");
-  const floatBtn = document.getElementById("cart-float");
+  const lista = $("#drawer-items"), vacio = $("#drawer-vacio"), totales = $("#drawer-totales"), floatBtn = $("#cart-float");
   if (!lista) return;
-
-  const total = totalCarrito();
-  const n = contarProductos();
+  const total = calcularTotal(carrito, CATALOGO.productos);
+  const n = contarProductos(carrito);
 
   lista.innerHTML = carrito.map((c) => {
-    const p = productoDe(c.id);
+    const p = CATALOGO.productos.find((x) => x.id === c.id);
     if (!p) return "";
     return `
       <li class="drawer__item">
-        <img class="drawer__item-img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" width="48" height="48">
+        <img class="drawer__item-img" src="${esc(p.imagen || "assets/logo/logo-200.webp")}" alt="" width="56" height="56" loading="lazy">
         <div class="drawer__item-info">
           <p class="drawer__item-nombre">${esc(p.nombre)}</p>
-          <span class="drawer__item-precio">${pesos(p.precio * c.cantidad)}</span>
+          <span class="drawer__item-precio">${pesos(p.precio)} c/u · ${pesos(p.precio * c.cantidad)}</span>
         </div>
-        <div class="drawer__qty">
-          <button type="button" data-qty="-1" data-id="${esc(p.id)}" aria-label="Disminuir cantidad de ${esc(p.nombre)}">−</button>
-          <span class="qty-val">${c.cantidad}</span>
-          <button type="button" data-qty="1" data-id="${esc(p.id)}" aria-label="Aumentar cantidad de ${esc(p.nombre)}">+</button>
+        <div class="drawer__qty" aria-label="Cantidad de ${esc(p.nombre)}">
+          <button type="button" data-qty="-1" data-id="${esc(p.id)}" aria-label="Disminuir ${esc(p.nombre)}">−</button>
+          <span class="qty-val" aria-live="polite">${c.cantidad}</span>
+          <button type="button" data-qty="1" data-id="${esc(p.id)}" aria-label="Aumentar ${esc(p.nombre)}">+</button>
         </div>
         <button type="button" class="drawer__item-del" data-del="${esc(p.id)}" aria-label="Eliminar ${esc(p.nombre)} del carrito">×</button>
       </li>`;
@@ -318,190 +399,183 @@ function pintarCarrito() {
 
   vacio.hidden = carrito.length > 0;
   totales.hidden = carrito.length === 0;
-  document.getElementById("drawer-subtotal").textContent = pesos(total);
-  document.getElementById("drawer-total").textContent = pesos(total);
+  $("#drawer-subtotal").textContent = pesos(total);
+  $("#drawer-total").textContent = pesos(total);
 
   if (floatBtn) {
     floatBtn.classList.toggle("is-hidden", carrito.length === 0);
-    floatBtn.innerHTML = "🛒 " + n + (n === 1 ? " producto" : " productos") + " · " + pesos(total);
+    floatBtn.textContent = "🛒 " + n + (n === 1 ? " producto" : " productos") + " · " + pesos(total);
   }
+  $("#btn-enviar").disabled = carrito.length === 0;
+  pintarEstadoPedido();
 }
 
-/* ---- Drawer: abrir/cerrar ---- */
-let drawerTrigger = null;
-function abrirDrawer() {
-  const overlay = document.getElementById("drawer-overlay");
-  const drawer = document.getElementById("drawer");
-  drawerTrigger = document.activeElement;
-  overlay.hidden = false;
-  drawer.hidden = false;
-  requestAnimationFrame(() => {
-    overlay.classList.add("is-open");
-    drawer.classList.add("is-open");
+/* ---- estados del pedido (nunca se afirma una entrega que no consta) ---- */
+const TEXTOS_ESTADO = {
+  inicial: "",
+  preparado: "📝 Pedido preparado (todavía sin enviar).",
+  whatsapp: "📲 WhatsApp abierto: el pedido no consta como enviado.",
+  enviado: "✅ Marcado como enviado · pendiente de confirmación del negocio.",
+};
+function pintarEstadoPedido() {
+  const el = $("#estado-pedido");
+  if (el) el.textContent = TEXTOS_ESTADO[estadoPedido] || "";
+  $("#paso-datos").hidden = estadoPedido !== "inicial";
+  $("#paso-listo").hidden = estadoPedido !== "preparado";
+  $("#paso-whatsapp").hidden = estadoPedido !== "whatsapp" && estadoPedido !== "enviado";
+  $("#estado-enviado").hidden = estadoPedido !== "enviado";
+  $("#btn-enviar").hidden = estadoPedido !== "inicial";
+}
+function reiniciarFlujo() { estadoPedido = "inicial"; mensajeActual = ""; pintarEstadoPedido(); pintarMensaje(""); }
+
+function pintarMensaje(texto) {
+  const pre = $("#mensaje-preview");
+  if (!pre) return;
+  pre.textContent = texto || "";
+  const url = texto && CATALOGO.contacto.whatsapp ? urlWhatsApp(CATALOGO.contacto.whatsapp, texto) : "";
+  ["#btn-abrir-wa", "#btn-reabrir-wa"].forEach((sel) => {
+    const a = $(sel);
+    if (!a) return;
+    if (url) { a.href = url; a.removeAttribute("aria-disabled"); }
+    else { a.href = "#"; a.setAttribute("aria-disabled", "true"); }
   });
-  setTimeout(() => { const f = document.getElementById("c-nombre"); if (f) f.focus(); }, 320);
-}
-function cerrarDrawer() {
-  const overlay = document.getElementById("drawer-overlay");
-  const drawer = document.getElementById("drawer");
-  overlay.classList.remove("is-open");
-  drawer.classList.remove("is-open");
-  setTimeout(() => {
-    overlay.hidden = true;
-    drawer.hidden = true;
-    if (drawerTrigger && drawerTrigger.focus) drawerTrigger.focus();
-  }, 300);
+  const reabrir = $("#btn-reabrir-wa");
+  if (reabrir) { reabrir.textContent = "Abrir WhatsApp de nuevo"; reabrir.href = url || "#"; }
 }
 
-/* ---- Toast ---- */
+function mostrarError(campo, mensaje) {
+  const input = document.getElementById("c-" + campo);
+  const err = document.getElementById("err-" + campo);
+  if (err) err.textContent = mensaje || "";
+  if (input) input.classList.toggle("is-invalid", !!mensaje);
+}
+function limpiarErrores() { ["nombre", "telefono", "direccion", "notas"].forEach((c) => mostrarError(c, "")); }
+
+function prepararPedido() {
+  const msg = $("#pedido-msg");
+  if (!carrito.length) { msg.className = "pedido__msg err"; msg.textContent = "Tu carrito está vacío. Agrega postres primero."; return; }
+  if (!CATALOGO.contacto.whatsapp) { msg.className = "pedido__msg err"; msg.textContent = "Falta el WhatsApp del negocio en la configuración."; return; }
+
+  const v = validarFormulario({
+    nombre: $("#c-nombre").value,
+    telefono: $("#c-telefono").value,
+    direccion: $("#c-direccion").value,
+    notas: $("#c-notas").value,
+  });
+  ["nombre", "telefono", "direccion", "notas"].forEach((c) => mostrarError(c, v.errores[c] || ""));
+  if (!v.ok) {
+    msg.className = "pedido__msg err";
+    msg.textContent = "Revisa los campos marcados para continuar.";
+    const primero = document.querySelector(".is-invalid");
+    if (primero) primero.focus();
+    return;
+  }
+
+  mensajeActual = construirMensaje(v.limpio, carrito, CATALOGO.productos, CATALOGO.marca);
+  estadoPedido = "preparado";
+  pintarMensaje(mensajeActual);
+  pintarEstadoPedido();
+  msg.className = "pedido__msg ok";
+  msg.textContent = "Pedido preparado. Revisa el mensaje y ábrelo en WhatsApp cuando quieras enviarlo.";
+  const btn = $("#btn-abrir-wa");
+  if (btn) btn.focus();
+}
+
+function marcarWhatsappAbierto() {
+  estadoPedido = "whatsapp";
+  pintarEstadoPedido();
+  const msg = $("#pedido-msg");
+  msg.className = "pedido__msg";
+  msg.textContent = "Se abrió WhatsApp. El pedido no consta como enviado hasta que pulses «Enviar» allí.";
+}
+
+/* ---- pedir un solo producto (no afirma envío) ---- */
+function pedirDirecto(id) {
+  const p = CATALOGO.productos.find((x) => x.id === id);
+  if (!p || !CATALOGO.contacto.whatsapp) { toast("Producto no disponible"); return; }
+  const texto = "Hola, quiero pedir: 1× " + (p.nombreCompleto || p.nombre) + " - " + pesos(p.precio) + ". (Envío por confirmar)";
+  const url = urlWhatsApp(CATALOGO.contacto.whatsapp, texto);
+  toast("Abriendo WhatsApp… el pedido no consta hasta que lo envíes");
+  window.open(url, "_blank", "noopener");
+}
+
+/* ---- toast ---- */
 let toastTimer = null;
 function toast(texto) {
-  let t = document.getElementById("toast");
-  if (!t) {
-    t = document.createElement("div");
-    t.id = "toast";
-    t.className = "toast";
-    document.body.appendChild(t);
-  }
+  let t = $("#toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
   t.textContent = texto;
   t.classList.add("is-visible");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("is-visible"), 1800);
+  toastTimer = setTimeout(() => t.classList.remove("is-visible"), 2400);
 }
 
-/* ---- Pedir solo este producto (respaldo directo) ---- */
-function pedirDirecto(id) {
-  const p = productoDe(id);
-  if (!p) return;
-  const texto = "Hola, quiero hacer un pedido 😊\n\n• 1× " + p.nombreCompleto + " - " + pesos(p.precio);
-  window.open("https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent(texto), "_blank", "noopener");
+/* ---- drawer ---- */
+let drawerTrigger = null;
+function abrirDrawer() {
+  const overlay = $("#drawer-overlay"), drawer = $("#drawer");
+  drawerTrigger = document.activeElement;
+  overlay.hidden = false; drawer.hidden = false;
+  requestAnimationFrame(() => { overlay.classList.add("is-open"); drawer.classList.add("is-open"); });
+  document.body.classList.add("con-drawer");
+  setTimeout(() => { const f = estadoPedido === "inicial" ? $("#c-nombre") : $("#drawer-cerrar"); if (f) f.focus(); }, 320);
 }
-
-/* ---- Enviar pedido del carrito por WhatsApp ---- */
-function enviarPedidoCarrito() {
-  const msg = document.getElementById("pedido-msg");
-
-  if (!carrito.length) {
-    msg.className = "pedido__msg err";
-    msg.textContent = "Tu carrito está vacío. Agrega postres primero.";
-    return;
-  }
-
-  const nombre = document.getElementById("c-nombre").value.trim();
-  const telefono = document.getElementById("c-telefono").value.trim();
-  const direccion = document.getElementById("c-direccion").value.trim();
-  const notas = document.getElementById("c-notas").value.trim();
-
-  const faltantes = [];
-  if (!nombre) faltantes.push("nombre");
-  if (!telefono) faltantes.push("teléfono");
-  if (!direccion) faltantes.push("dirección");
-  if (faltantes.length) {
-    msg.className = "pedido__msg err";
-    msg.textContent = "Falta completar: " + faltantes.join(", ") + ".";
-    return;
-  }
-
-  const lineas = carrito.map((c) => {
-    const p = productoDe(c.id);
-    return "• " + c.cantidad + "× " + (p ? p.nombreCompleto : c.id) + " - " + pesos((p ? p.precio : 0) * c.cantidad);
-  });
-  const partes = [
-    "Hola, soy " + nombre + ". Quiero:",
-    lineas.join("\n"),
-    "*Total: " + pesos(totalCarrito()) + "*",
-    "Tel: " + telefono,
-    "Dirección: " + direccion
-  ];
-  if (notas) partes.push("Notas: " + notas);
-
-  const url = "https://wa.me/" + DATA.contacto.whatsapp + "?text=" + encodeURIComponent(partes.join("\n"));
-  msg.className = "pedido__msg ok";
-  msg.innerHTML = 'Abriendo WhatsApp… Si no abre, <a href="' + url + '" target="_blank" rel="noopener">toca aquí</a>.';
-  window.open(url, "_blank", "noopener");
-
-  // Vaciar el carrito tras abrir WhatsApp
+function cerrarDrawer() {
+  const overlay = $("#drawer-overlay"), drawer = $("#drawer");
+  overlay.classList.remove("is-open"); drawer.classList.remove("is-open");
+  document.body.classList.remove("con-drawer");
   setTimeout(() => {
-    carrito = [];
-    guardarCarrito();
-    pintarCarrito();
-    cerrarDrawer();
-    toast("✅ Pedido enviado. ¡Gracias!");
-  }, 1000);
+    overlay.hidden = true; drawer.hidden = true;
+    if (drawerTrigger && drawerTrigger.focus) drawerTrigger.focus();
+  }, 300);
 }
+function drawerAbierto() { const d = $("#drawer"); return d && !d.hidden && d.classList.contains("is-open"); }
 
-/* ---- Init: listeners del carrito/drawer ---- */
-function initCarrito() {
-  const abrir = document.getElementById("btn-abrir-carrito");
-  const float = document.getElementById("cart-float");
-  const cerrar = document.getElementById("drawer-cerrar");
-  const overlay = document.getElementById("drawer-overlay");
-  const enviar = document.getElementById("btn-enviar");
-  const vaciar = document.getElementById("btn-vaciar");
-  const items = document.getElementById("drawer-items");
-
-  if (abrir) abrir.addEventListener("click", abrirDrawer);
-  if (float) float.addEventListener("click", abrirDrawer);
-  if (cerrar) cerrar.addEventListener("click", cerrarDrawer);
-  if (overlay) overlay.addEventListener("click", cerrarDrawer);
-  if (enviar) enviar.addEventListener("click", enviarPedidoCarrito);
-  if (vaciar) vaciar.addEventListener("click", vaciarCarrito);
-
-  if (items) {
-    items.addEventListener("click", (e) => {
-      const qtyBtn = e.target.closest("[data-qty][data-id]");
-      if (qtyBtn) { cambiarCantidad(qtyBtn.dataset.id, parseInt(qtyBtn.dataset.qty, 10)); return; }
-      const delBtn = e.target.closest("[data-del]");
-      if (delBtn) quitarDelCarrito(delBtn.dataset.del);
-    });
-  }
-
-  document.addEventListener("keydown", (e) => {
-    const drawer = document.getElementById("drawer");
-    if (!drawer.classList.contains("is-open")) return;
-    if (e.key === "Escape") { cerrarDrawer(); return; }
-    if (e.key === "Tab") {
-      const focusables = drawer.querySelectorAll("button, input, textarea, a[href]");
-      if (!focusables.length) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
-      else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
-    }
-  });
-}
-
-/* ---- Hero: si el video falla, ocultarlo para que se vea el degradado ---- */
-function vigilarVideo() {
-  const v = document.getElementById("heroVideo");
-  if (!v) return;
-  const ocultar = () => { v.style.display = "none"; };
-  v.addEventListener("error", ocultar, { once: true });
-  const src = v.querySelector("source");
-  if (src) src.addEventListener("error", ocultar, { once: true });
-}
-
-/* ---- Partículas flotantes del hero: frutas que suben y explotan (canvas) ---- */
+/* ---- hero: partículas (sin video, porque no existe el archivo) ---- */
+/* Partículas del encabezado.
+   Cada emoji se dibuja UNA vez en un lienzo fuera de pantalla y luego se copia con drawImage:
+   dibujar texto (sobre todo emoji) en cada fotograma era lo que disparaba el trabajo del hilo
+   principal. Además se limita a ~20 fps, hay menos partículas y no arranca hasta que la página
+   terminó de cargar. */
 function crearParticulas() {
-  const canvas = document.getElementById("hero-particles");
-  const hero = document.querySelector(".hero");
-  if (!canvas || !hero) return;
+  const canvas = $("#hero-particles"), hero = $(".hero");
+  if (!canvas || !hero || !canvas.getContext) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
+  if (navigator.connection && navigator.connection.saveData) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
   const movil = window.matchMedia("(max-width: 480px)").matches;
-  const N = movil ? 8 : 12;
+  const N = movil ? 5 : 8;
+  const FPS = 20;
   const frutas = ["🍓", "🫐", "🍒", "❤️"];
   const chispas = ["#e63950", "#ffb6c1"];
+  const sprites = new Map();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function sprite(emoji, tam) {
+    const clave = emoji + "|" + tam;
+    let c = sprites.get(clave);
+    if (c) return c;
+    const lado = Math.ceil(tam * 1.5);
+    c = document.createElement("canvas");
+    c.width = Math.ceil(lado * dpr);
+    c.height = Math.ceil(lado * dpr);
+    const x = c.getContext("2d");
+    x.scale(dpr, dpr);
+    x.font = tam + "px sans-serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillText(emoji, lado / 2, lado / 2);
+    sprites.set(clave, c);
+    return c;
+  }
 
   let W = 0, H = 0, partes = [], chispa = [], visible = true;
 
   const redimensionar = () => {
     const r = hero.getBoundingClientRect();
     W = r.width; H = r.height;
-    const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -509,113 +583,135 @@ function crearParticulas() {
   redimensionar();
   window.addEventListener("resize", redimensionar);
 
-  const nueva = (y) => ({
-    x: Math.random() * W,
-    y: y == null ? H + 40 : y,
-    vx: (Math.random() - 0.5) * 0.4,
-    vy: 0.35 + Math.random() * 0.6,
-    tam: 16 + Math.random() * 14,
-    rot: Math.random() * Math.PI * 2,
-    vr: (Math.random() - 0.5) * 0.03,
-    emoji: frutas[(Math.random() * frutas.length) | 0],
-    op: 0.4 + Math.random() * 0.5
-  });
-
+  const nueva = (y) => {
+    const tam = Math.round((16 + Math.random() * 12) / 4) * 4;   // tamaños en múltiplos de 4: reutiliza sprites
+    return {
+      x: Math.random() * W, y: y == null ? H + 40 : y,
+      vx: (Math.random() - 0.5) * 0.4, vy: 0.3 + Math.random() * 0.5,
+      tam, sprite: sprite(frutas[(Math.random() * frutas.length) | 0], tam),
+      rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.03,
+      op: 0.3 + Math.random() * 0.4,
+    };
+  };
   const explotar = (p) => {
-    const n = movil ? 5 : 7;
+    const n = movil ? 4 : 6;
     for (let i = 0; i < n; i++) {
-      const a = (Math.PI * 2 * i) / n + Math.random() * 0.6;
-      const v = 1.5 + Math.random() * 2.5;
-      chispa.push({
-        x: p.x, y: p.y,
-        vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-        tam: 2 + Math.random() * 3,
-        color: chispas[i % 2],
-        vida: 1
-      });
+      const a = (Math.PI * 2 * i) / n + Math.random() * 0.6, v = 1.4 + Math.random() * 2;
+      chispa.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, tam: 2 + Math.random() * 2, color: chispas[i % 2], vida: 1 });
     }
   };
-
   for (let i = 0; i < N; i++) partes.push(nueva(Math.random() * H));
+  if ("IntersectionObserver" in window) new IntersectionObserver((e) => { visible = e[0].isIntersecting; }, { threshold: 0 }).observe(hero);
 
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver((e) => { visible = e[0].isIntersecting; }, { threshold: 0 });
-    io.observe(hero);
-  }
-
-  (function loop() {
+  let ultimo = 0;
+  (function loop(t) {
     requestAnimationFrame(loop);
-    if (!visible) return;
+    if (!visible || document.hidden) return;
+    if (t && t - ultimo < 1000 / FPS) return;
+    ultimo = t || 0;
     ctx.clearRect(0, 0, W, H);
-
     for (let i = 0; i < partes.length; i++) {
       const p = partes[i];
-      p.y -= p.vy;
-      p.x += p.vx;
-      p.rot += p.vr;
-
+      p.y -= p.vy; p.x += p.vx; p.rot += p.vr;
       if (p.y < 50) { explotar(p); partes[i] = nueva(); continue; }
-
+      const lado = p.tam * 1.5;
       ctx.save();
+      ctx.globalAlpha = p.op;
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
-      ctx.globalAlpha = p.op;
-      ctx.font = p.tam + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(p.emoji, 0, 0);
+      ctx.drawImage(p.sprite, -lado / 2, -lado / 2, lado, lado);
       ctx.restore();
     }
-
     for (let i = chispa.length - 1; i >= 0; i--) {
-      const s = chispa[i];
-      s.x += s.vx;
-      s.y += s.vy;
-      s.vy += 0.06;
-      s.vida -= 0.025;
-      if (s.vida <= 0) { chispa.splice(i, 1); continue; }
-      ctx.globalAlpha = Math.max(0, s.vida);
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.tam, 0, Math.PI * 2);
-      ctx.fill();
+      const s2 = chispa[i];
+      s2.x += s2.vx; s2.y += s2.vy; s2.vy += 0.06 * 2; s2.vida -= 0.05;
+      if (s2.vida <= 0) { chispa.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(0, s2.vida); ctx.fillStyle = s2.color;
+      ctx.beginPath(); ctx.arc(s2.x, s2.y, s2.tam, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
   })();
 }
 
-/* ---- Scroll-spy: marca el tab activo según la sección visible ---- */
 function initScrollSpy() {
   const items = [...document.querySelectorAll(".tabbar a")];
   if (!items.length || !("IntersectionObserver" in window)) return;
-
-  const activar = (href) => {
-    items.forEach((a) => a.classList.toggle("activo", a.getAttribute("href") === href));
-  };
-
-  // Feedback inmediato al tocar (el scroll suave ya viene del CSS).
+  const activar = (href) => items.forEach((a) => a.classList.toggle("activo", a.getAttribute("href") === href));
   items.forEach((a) => a.addEventListener("click", () => activar(a.getAttribute("href"))));
-
-  // Solo se observan las secciones que tienen su tab correspondiente.
   const conTab = new Set(items.map((a) => (a.getAttribute("href") || "").slice(1)));
-  const secciones = [...document.querySelectorAll("section[id], footer[id]")]
-    .filter((s) => conTab.has(s.id));
-
+  const secciones = [...document.querySelectorAll("section[id]")].filter((s) => conTab.has(s.id));
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (e.isIntersecting) activar("#" + e.target.id);
-    });
+    entries.forEach((e) => { if (e.isIntersecting) activar("#" + e.target.id); });
   }, { rootMargin: "-40% 0px -40% 0px", threshold: 0 });
-
   secciones.forEach((s) => observer.observe(s));
 }
 
-/* ---- Arranque ---- */
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("anio").textContent = new Date().getFullYear();
-  vigilarVideo();
-  crearParticulas();
-  initScrollSpy();
-  initCarrito();
-  cargarDatos();
-});
+function initEventos() {
+  $("#btn-abrir-carrito").addEventListener("click", abrirDrawer);
+  $("#cart-float").addEventListener("click", abrirDrawer);
+  $("#drawer-cerrar").addEventListener("click", cerrarDrawer);
+  $("#drawer-overlay").addEventListener("click", cerrarDrawer);
+
+  $("#drawer-items").addEventListener("click", (e) => {
+    const q = e.target.closest("[data-qty][data-id]");
+    if (q) { cambiarCantidad(q.dataset.id, parseInt(q.dataset.qty, 10)); return; }
+    const del = e.target.closest("[data-del]");
+    if (del) quitar(del.dataset.del);
+  });
+
+  $("#btn-enviar").addEventListener("click", prepararPedido);
+  $("#btn-vaciar").addEventListener("click", vaciarCarrito);
+  $("#btn-volver-datos").addEventListener("click", () => { estadoPedido = "inicial"; pintarEstadoPedido(); pintarMensaje(""); });
+  $("#btn-abrir-wa").addEventListener("click", () => {
+    if (!mensajeActual) { estadoPedido = "preparado"; }
+    marcarWhatsappAbierto();
+  });
+  $("#btn-reabrir-wa").addEventListener("click", marcarWhatsappAbierto);
+  $("#btn-marco-enviado").addEventListener("click", () => {
+    estadoPedido = "enviado";
+    pintarEstadoPedido();
+    const msg = $("#pedido-msg");
+    msg.className = "pedido__msg ok";
+    msg.textContent = "Gracias. El pedido queda pendiente hasta que el negocio lo confirme en el chat.";
+    toast("Marcado como enviado · pendiente de confirmación del negocio");
+  });
+
+  ["nombre", "telefono", "direccion", "notas"].forEach((c) => {
+    const el = document.getElementById("c-" + c);
+    if (el) el.addEventListener("input", () => mostrarError(c, ""));
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!drawerAbierto()) return;
+    if (e.key === "Escape") { cerrarDrawer(); return; }
+    if (e.key === "Tab") {
+      const drawer = $("#drawer");
+      const f = [...drawer.querySelectorAll("button, input, textarea, a[href]")].filter((x) => !x.hidden && x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+      else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+    }
+  });
+}
+
+/* Arranque del sitio (se omite cuando el archivo se carga desde Node para las pruebas). */
+if (typeof document !== "undefined") {
+  /* Las partículas empiezan después del evento load: no compiten con el primer render. */
+  window.addEventListener("load", () => setTimeout(crearParticulas, 700), { once: true });
+  document.addEventListener("DOMContentLoaded", async () => {
+    $("#anio").textContent = new Date().getFullYear();
+    initScrollSpy();
+    initEventos();
+    limpiarErrores();
+    await cargarCatalogo();
+    carrito = sanearCarrito(leerCarrito(), CATALOGO.productos);
+    pintar();
+    pintarEstadoPedido();
+  });
+}
+
+/* Exportado solo para las pruebas automatizadas en Node. */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { validarCatalogo, normalizarProducto, sanearCarrito, calcularTotal, contarProductos, validarFormulario, construirMensaje, urlWhatsApp, precioValido, cantidadValida, MAX_POR_ITEM };
+}
