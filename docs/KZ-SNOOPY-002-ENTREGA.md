@@ -1,7 +1,7 @@
 # KZ-SNOOPY-002 — Entrega de corrección y rediseño
 
 **Proyecto:** Postres Snoopy · **Repositorio:** `konfiozinc/postres` · **Rama de trabajo:** `kz-snoopy-002`
-**Fecha:** 2-nov-2026 · **Estado:** implementado, probado y **sin publicar** (a la espera de autorización)
+**Fecha:** 2-nov-2026 · **Estado:** **PUBLICADO** en `main` (`89564c9`) y verificado en producción
 
 ---
 
@@ -126,6 +126,24 @@ Las cifras iniciales que reporté (46 / 98) se tomaron con un servidor **sin com
 Se conservan íntegras las mejoras de seguridad (tres estados del pedido, carrito saneado, catálogo validado), accesibilidad (**100**) y responsive (cuatro tamaños verificados).
 
 Las pruebas funcionales se repitieron tras las optimizaciones: **15/15** del núcleo y **58/58** de extremo a extremo.
+
+### Resultados en la URL publicada (`https://konfiozinc.github.io/postres/`)
+
+Medidos con el mismo método, dos corridas cada uno, ya en GitHub Pages:
+
+| Configuración | Rendimiento | A11y | Prácticas | SEO | FCP | LCP | TBT | CLS |
+|---|---|---|---|---|---|---|---|---|
+| **Producción · móvil** | **82–83** | 100 | 100 | 100 | 3.149/3.117 ms | 3.437/3.426 ms | **0 ms** | **0** |
+| **Producción · escritorio** | **97–97** | 100 | 100 | 100 | 923/904 ms | 1.048/1.113 ms | **0 ms** | **0,003** |
+
+Comparado con la versión anterior ya publicada: móvil **52 → 82** y escritorio **84–87 → 97**.
+
+### Verificación funcional en producción — **40/40**
+
+- Catálogo: **6 productos** con nombres y precios originales (10.000 ×3, 8.000 ×3), HTTP 200, sin errores de consola ni recursos faltantes.
+- Carrito: suma correcta (3 uds = $30.000); con `localStorage` manipulado se descarta el producto inventado, la cantidad negativa, y 999 se acota a **20** con total recalculado a $200.000 desde el catálogo.
+- Flujo de WhatsApp: teléfono inválido rechazado, «pedido preparado» sin afirmar envío, **carrito intacto**, apertura de WhatsApp con el mensaje, aviso de que no se ha enviado, estado **pendiente de confirmación del negocio** y vaciado **solo** por acción explícita.
+- Responsive en 375, 768, 1440 y 1920: 1/2/4/4 columnas, contenedor ≤1200 px, 0 px de desbordamiento, objetivos táctiles ≥44 px, navegación correcta y consola limpia en los cuatro.
 ## 6. Commits
 
 Rama `kz-snoopy-002`, **subida a GitHub** (`origin/kz-snoopy-002`). `main` **no** se tocó y el sitio **no** se publicó:
@@ -147,7 +165,7 @@ Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `prue
 
 ## 8. Recomendación de publicación
 
-**Recomiendo publicar**, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión actual **sí afirma un envío que no puede verificar**. Pasos sugeridos, una vez el CTO autorice:
+**Publicado el 2-nov-2026** tras la autorización del CTO, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión actual **sí afirma un envío que no puede verificar**. Pasos sugeridos, una vez el CTO autorice:
 
 1. `git push origin kz-snoopy-002` y revisión de la rama.
 2. Merge a `main` (fast-forward o `--no-ff`).
