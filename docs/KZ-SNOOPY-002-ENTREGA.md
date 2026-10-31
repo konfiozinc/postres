@@ -60,12 +60,18 @@ Productos y precios intactos: `crema` $10.000 · `chocolate` $10.000 · `caramel
 
 Precios, cantidades, catálogo real (conserva los 6 productos y sus precios), catálogo roto, productos inválidos y duplicados, WhatsApp inválido, manipulación de `localStorage`, total con precio falso, formulario (campos vacíos, teléfono corto/largo), mensaje y enlace de WhatsApp.
 
-### Pruebas de extremo a extremo (`node pruebas/e2e.cjs`) — **55/55 PASS**
+### Pruebas de extremo a extremo (`node pruebas/e2e.cjs`) — **58/58 PASS**
 
 - **Distribución en 375×812, 768×1024, 1440×900 y 1920×1080:** 6 productos, 6/6 fotos, contenedor ≤1200 px, sin desbordamiento horizontal, todos los objetivos táctiles ≥44 px, navegación según tamaño, sin errores de consola ni 404.
 - **Flujo del pedido:** validación de campos (3 errores con el formulario vacío), rechazo de teléfono inválido, paso a «preparado» con mensaje y total correctos ($40.000 para 3+1 unidades), **carrito intacto**, enlace a WhatsApp correcto, apertura en pestaña nueva, aviso de que no se ha enviado, marcado «ya lo envié» y vaciado **solo** por acción explícita.
 - **Manipulación de `localStorage`:** se descartan producto inventado y cantidad negativa, se acota a 20 y el total se recalcula ($216.000).
 - **Catálogo caído:** aviso visible, **0 productos inventados**, interfaz en pie.
+
+### Pruebas de seguridad — **3/3 PASS**
+
+- **Inyección en el formulario:** con etiquetas HTML y de script en nombre, dirección y notas, **no se ejecuta código** (0 banderas activadas) y **no se crean nodos** desde esos textos.
+- **Vista previa:** el mensaje se muestra como texto literal, nunca interpretado como HTML.
+- **Sin pedidos reales:** durante toda la batería no se abrió ni una pestaña de WhatsApp (0 aperturas).
 
 ## 4. Capturas antes/después
 
@@ -102,7 +108,7 @@ Notas honestas: el rendimiento móvil se mantiene bajo (49) por la CPU emulada d
 
 ## 6. Commits
 
-Rama `kz-snoopy-002`, **un commit** con todo el trabajo (no se ha hecho push ni publicación):
+Rama `kz-snoopy-002`, **subida a GitHub** (`origin/kz-snoopy-002`). `main` **no** se tocó y el sitio **no** se publicó:
 
 - Único commit de la rama (`git log -1 kz-snoopy-002`) — *fix(kz-snoopy-002): pedido por WhatsApp en tres estados sin vaciado automático, validación de catálogo y carrito, rediseño responsive con contraste AA, pruebas y entrega*
 
@@ -120,7 +126,7 @@ Archivos del commit: `index.html`, `styles.css`, `script.js`, `README.md`, `prue
 
 ## 8. Recomendación de publicación
 
-**Recomiendo publicar**, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 55 de extremo a extremo y cuatro tamaños), y porque la versión actual **sí afirma un envío que no puede verificar**. Pasos sugeridos, una vez el CTO autorice:
+**Recomiendo publicar**, porque los hallazgos P1 están corregidos y todo está verificado (15 pruebas de núcleo, 58 de extremo a extremo y cuatro tamaños), y porque la versión actual **sí afirma un envío que no puede verificar**. Pasos sugeridos, una vez el CTO autorice:
 
 1. `git push origin kz-snoopy-002` y revisión de la rama.
 2. Merge a `main` (fast-forward o `--no-ff`).
