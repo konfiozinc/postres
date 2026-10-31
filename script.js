@@ -248,11 +248,11 @@ function pintarRedes() {
 function pintarGaleria() {
   const gal = $("#galeria");
   if (!CATALOGO.productos.length) { gal.innerHTML = ""; return; }
-  gal.innerHTML = CATALOGO.productos.map((p) => `
+  gal.innerHTML = CATALOGO.productos.map((p, i) => `
     <article class="prod" data-id="${esc(p.id)}">
       <div class="prod__figura">
         <img class="prod__img" src="${esc(p.imagen || "assets/logo/logo-200.webp")}" alt="${esc(p.nombre)}"
-             width="720" height="900" loading="lazy" decoding="async">
+             width="720" height="900" loading="${i < 2 ? "eager" : "lazy"}" fetchpriority="${i === 0 ? "high" : "auto"}" decoding="async">
         ${p.alergenos.length ? `<p class="prod__alergenos">Alérgenos: ${esc(p.alergenos.join(", "))}</p>` : ""}
       </div>
       <div class="prod__body">
@@ -532,39 +532,72 @@ function cerrarDrawer() {
 function drawerAbierto() { const d = $("#drawer"); return d && !d.hidden && d.classList.contains("is-open"); }
 
 /* ---- hero: partículas (sin video, porque no existe el archivo) ---- */
+/* Partículas del encabezado.
+   Cada emoji se dibuja UNA vez en un lienzo fuera de pantalla y luego se copia con drawImage:
+   dibujar texto (sobre todo emoji) en cada fotograma era lo que disparaba el trabajo del hilo
+   principal. Además se limita a ~20 fps, hay menos partículas y no arranca hasta que la página
+   terminó de cargar. */
 function crearParticulas() {
   const canvas = $("#hero-particles"), hero = $(".hero");
   if (!canvas || !hero || !canvas.getContext) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (navigator.connection && navigator.connection.saveData) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+
   const movil = window.matchMedia("(max-width: 480px)").matches;
-  const N = movil ? 7 : 11;
+  const N = movil ? 5 : 8;
+  const FPS = 20;
   const frutas = ["🍓", "🫐", "🍒", "❤️"];
   const chispas = ["#e63950", "#ffb6c1"];
+  const sprites = new Map();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function sprite(emoji, tam) {
+    const clave = emoji + "|" + tam;
+    let c = sprites.get(clave);
+    if (c) return c;
+    const lado = Math.ceil(tam * 1.5);
+    c = document.createElement("canvas");
+    c.width = Math.ceil(lado * dpr);
+    c.height = Math.ceil(lado * dpr);
+    const x = c.getContext("2d");
+    x.scale(dpr, dpr);
+    x.font = tam + "px sans-serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillText(emoji, lado / 2, lado / 2);
+    sprites.set(clave, c);
+    return c;
+  }
+
   let W = 0, H = 0, partes = [], chispa = [], visible = true;
 
   const redimensionar = () => {
     const r = hero.getBoundingClientRect();
     W = r.width; H = r.height;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
   redimensionar();
   window.addEventListener("resize", redimensionar);
 
-  const nueva = (y) => ({
-    x: Math.random() * W, y: y == null ? H + 40 : y,
-    vx: (Math.random() - 0.5) * 0.4, vy: 0.3 + Math.random() * 0.5,
-    tam: 16 + Math.random() * 12, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.03,
-    emoji: frutas[(Math.random() * frutas.length) | 0], op: 0.35 + Math.random() * 0.45,
-  });
+  const nueva = (y) => {
+    const tam = Math.round((16 + Math.random() * 12) / 4) * 4;   // tamaños en múltiplos de 4: reutiliza sprites
+    return {
+      x: Math.random() * W, y: y == null ? H + 40 : y,
+      vx: (Math.random() - 0.5) * 0.4, vy: 0.3 + Math.random() * 0.5,
+      tam, sprite: sprite(frutas[(Math.random() * frutas.length) | 0], tam),
+      rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.03,
+      op: 0.3 + Math.random() * 0.4,
+    };
+  };
   const explotar = (p) => {
-    const n = movil ? 5 : 6;
+    const n = movil ? 4 : 6;
     for (let i = 0; i < n; i++) {
       const a = (Math.PI * 2 * i) / n + Math.random() * 0.6, v = 1.4 + Math.random() * 2;
-      chispa.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, tam: 2 + Math.random() * 2.5, color: chispas[i % 2], vida: 1 });
+      chispa.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, tam: 2 + Math.random() * 2, color: chispas[i % 2], vida: 1 });
     }
   };
   for (let i = 0; i < N; i++) partes.push(nueva(Math.random() * H));
@@ -574,23 +607,27 @@ function crearParticulas() {
   (function loop(t) {
     requestAnimationFrame(loop);
     if (!visible || document.hidden) return;
-    if (t && t - ultimo < 33) return;   // ~30 fps: suficiente y mucho más barato
+    if (t && t - ultimo < 1000 / FPS) return;
     ultimo = t || 0;
     ctx.clearRect(0, 0, W, H);
     for (let i = 0; i < partes.length; i++) {
       const p = partes[i];
       p.y -= p.vy; p.x += p.vx; p.rot += p.vr;
       if (p.y < 50) { explotar(p); partes[i] = nueva(); continue; }
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = p.op;
-      ctx.font = p.tam + "px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(p.emoji, 0, 0); ctx.restore();
+      const lado = p.tam * 1.5;
+      ctx.save();
+      ctx.globalAlpha = p.op;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.drawImage(p.sprite, -lado / 2, -lado / 2, lado, lado);
+      ctx.restore();
     }
     for (let i = chispa.length - 1; i >= 0; i--) {
-      const s = chispa[i];
-      s.x += s.vx; s.y += s.vy; s.vy += 0.06; s.vida -= 0.025;
-      if (s.vida <= 0) { chispa.splice(i, 1); continue; }
-      ctx.globalAlpha = Math.max(0, s.vida); ctx.fillStyle = s.color;
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.tam, 0, Math.PI * 2); ctx.fill();
+      const s2 = chispa[i];
+      s2.x += s2.vx; s2.y += s2.vy; s2.vy += 0.06 * 2; s2.vida -= 0.05;
+      if (s2.vida <= 0) { chispa.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(0, s2.vida); ctx.fillStyle = s2.color;
+      ctx.beginPath(); ctx.arc(s2.x, s2.y, s2.tam, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
   })();
@@ -660,9 +697,10 @@ function initEventos() {
 
 /* Arranque del sitio (se omite cuando el archivo se carga desde Node para las pruebas). */
 if (typeof document !== "undefined") {
+  /* Las partículas empiezan después del evento load: no compiten con el primer render. */
+  window.addEventListener("load", () => setTimeout(crearParticulas, 700), { once: true });
   document.addEventListener("DOMContentLoaded", async () => {
     $("#anio").textContent = new Date().getFullYear();
-    crearParticulas();
     initScrollSpy();
     initEventos();
     limpiarErrores();

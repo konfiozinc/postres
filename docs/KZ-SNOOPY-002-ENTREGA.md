@@ -93,19 +93,39 @@ Medidas que se ven en las capturas:
 | 1440 | **560 → 1200 px** | **1 → 4 col · 165 → 270 px** | **163 → 334 px** | **10 → 44 px** |
 | 1920 | **560 → 1200 px** | **1 → 4 col · 165 → 270 px** | **163 → 334 px** | **10 → 44 px** |
 
-## 5. Resultados Lighthouse
+## 5. Resultados Lighthouse y revisión de la supuesta regresión
 
-Lighthouse 13.5.0, Chromium del entorno, servidor local.
+**Método de la comparación:** mismo binario (Lighthouse 13.5.0), mismo navegador (Chromium del entorno),
+mismo servidor (con **gzip** y caché, para parecerse a GitHub Pages), mismo preset, `--throttling-method=simulate`,
+**dos corridas por configuración** y mediana. `main` se sirvió desde un worktree de `git` con la versión publicada.
 
-| | Rendimiento | Accesibilidad | Buenas prácticas | SEO | FCP | LCP | CLS | TBT |
+### ¿Existía la regresión de 88 → 49?
+
+**No.** En condiciones idénticas, la versión publicada (`main`) ya puntuaba **49–50 en móvil**, no 88.
+El 88 no se reproduce con ninguna combinación probada en móvil; lo más parecido es el escritorio de `main` (84–87).
+Las cifras iniciales que reporté (46 / 98) se tomaron con un servidor **sin compresión**, así que tampoco eran comparables entre sí.
+
+### Comparación final (idénticas condiciones, mediana de 2 corridas)
+
+| Configuración | Rendimiento | A11y | Prácticas | SEO | FCP | LCP | TBT | CLS |
 |---|---|---|---|---|---|---|---|---|
-| **Antes · móvil** | 46 | 93 | 96 | 100 | 3.054 ms | 4.011 ms | 0 | 5.648 ms |
-| **Después · móvil** | **49** | **100** | **100** | 100 | 3.013 ms | 3.932 ms | **0** | 4.455 ms |
-| **Antes · escritorio** | 98 | 93 | 96 | 100 | 844 ms | 884 ms | 0,031 | 0 ms |
-| **Después · escritorio** | 98 | **100** | **100** | 100 | 856 ms | 948 ms | **0,003** | 0 ms |
+| `main` · móvil | **49–50** | 93 | 96 | 100 | 2.879 ms | 3.634 ms | **9.612 ms** | 0 |
+| rama · móvil (antes de optimizar) | 52–52 | 100 | 100 | 100 | 2.863 ms | 3.727 ms | 3.947–6.111 ms | 0 |
+| **rama · móvil (final)** | **81–81** | **100** | **100** | 100 | 2.872 ms | 3.857 ms | **0 ms** | **0** |
+| `main` · escritorio | **84** (87/81) | 93 | 96 | 100 | 814 ms | 814 ms | 239 ms | 0,034 |
+| **rama · escritorio (final)** | **99–99** | **100** | **100** | 100 | 800 ms | 840 ms | **0 ms** | **0,002** |
+| producción publicada (`main`) · móvil | 52–52 | 93 | 96 | 100 | 3.089 ms | 3.089 ms | 5.439 ms | 0 |
 
-Notas honestas: el rendimiento móvil se mantiene bajo (49) por la CPU emulada de Lighthouse y el trabajo de tipografías/canvas; en escritorio es 98. El CLS bajó de 0,031 a 0,003 al fijar la altura de la portada y ocultar desde el marcado los iconos sociales sin URL. La accesibilidad sube a 100 y las buenas prácticas a 100 en ambos perfiles.
+### Causas encontradas y corregidas
 
+1. **El canvas de partículas era el culpable del TBT.** El informe de Lighthouse atribuía a `script.js` **9,8 s** de trabajo del hilo principal con solo 0,3 s de evaluación de script: cada fotograma dibujaba emojis con `fillText`, lo más caro que existe para el hilo principal. Ahora cada emoji se dibuja **una sola vez** en un lienzo fuera de pantalla y se copia con `drawImage`; además baja a **20 fps**, hay menos partículas en móvil y la animación **arranca 700 ms después del evento `load`**, cuando la página ya está pintada. Resultado: **TBT de 9.612 ms a 0 ms**.
+2. **Fotografías:** la portada se precarga con `fetchpriority="high"` y las **dos primeras tarjetas** cargan con `loading="eager"` y prioridad alta (el resto sigue en diferido). Las imágenes conservan `width`/`height` y proporción fija, así que no generan saltos.
+3. **Fuentes:** se probó cargarlas de forma asíncrona; subía a 66 puntos pero **introducía CLS de 0,310** con red simulada, así que se dejó la carga bloqueante: con el canvas ya resuelto, no cuesta rendimiento y mantiene **CLS 0**.
+4. **Estabilidad visual:** portada de altura fija y contenido superpuesto desde la entrega anterior; CLS final **0,002**.
+
+Se conservan íntegras las mejoras de seguridad (tres estados del pedido, carrito saneado, catálogo validado), accesibilidad (**100**) y responsive (cuatro tamaños verificados).
+
+Las pruebas funcionales se repitieron tras las optimizaciones: **15/15** del núcleo y **58/58** de extremo a extremo.
 ## 6. Commits
 
 Rama `kz-snoopy-002`, **subida a GitHub** (`origin/kz-snoopy-002`). `main` **no** se tocó y el sitio **no** se publicó:
