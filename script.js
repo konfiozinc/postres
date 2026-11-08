@@ -155,21 +155,47 @@ function validarFormulario(datos) {
 
 function pesos(n) { return "$" + Number(n || 0).toLocaleString("es-CO"); }
 
-/** Mensaje que se le entrega al cliente para que lo envíe él mismo. */
-function construirMensaje(datos, carrito, productos, marca) {
+/** Código de consulta del pedido (12 caracteres). Se guarda durante la sesión, como en los menús. */
+const CLAVE_CODIGO = "snoopy-codigo-pedido";
+function codigoDePedido(renovar) {
+  let codigo = "";
+  try { codigo = sessionStorage.getItem(CLAVE_CODIGO) || ""; } catch (e) { codigo = ""; }
+  if (renovar || codigo.length !== 12) {
+    const a = new Uint8Array(12);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(a);
+    else for (let i = 0; i < 12; i += 1) a[i] = Math.floor(Math.random() * 256);
+    codigo = Array.from(a).map((b) => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
+    try { sessionStorage.setItem(CLAVE_CODIGO, codigo); } catch (e) { /* modo privado */ }
+  }
+  return codigo;
+}
+
+/** Mensaje que se le entrega al cliente para que lo envíe él mismo (formato de factura KZ-MENU-004). */
+function construirMensaje(datos, carrito, productos, marca, codigo) {
+  const negocio = String((marca && (marca.nombreNegocio || marca.nombre)) || "Postres Snoopy").toUpperCase();
+  const folio = codigo || codigoDePedido();
   const lineas = carrito.map((c) => {
     const p = productos.find((x) => x.id === c.id);
-    return "• " + c.cantidad + "× " + (p ? p.nombreCompleto || p.nombre : c.id) + " - " + pesos(precioDe(c.id, productos) * c.cantidad);
+    const nombre = p ? (p.nombreCompleto || p.nombre) : c.id;
+    return "▪️ " + c.cantidad + "x " + nombre + " — " + pesos(precioDe(c.id, productos) * c.cantidad);
   });
   const partes = [
-    "Hola, soy " + datos.nombre + ". Quiero:",
+    "🛍️ *NUEVO PEDIDO EN " + negocio + "*",
+    "📝 Código: *" + folio + "*",
+    "----------------------------",
+    "*DETALLE:*",
     lineas.join("\n"),
-    "*Total de productos: " + pesos(calcularTotal(carrito, productos)) + "*",
-    "Tel: " + datos.telefono,
-    "Dirección: " + datos.direccion,
+    "----------------------------",
+    "💵 *TOTAL A PAGAR: " + pesos(calcularTotal(carrito, productos)) + "*",
+    "----------------------------",
+    "⚠️ _El valor y disponibilidad quedan pendientes de confirmación del negocio._",
+    "----------------------------",
+    // Datos de entrega: sin ellos el pedido no se puede entregar (se conservan del formulario).
+    "👤 " + datos.nombre,
+    "📞 " + datos.telefono,
+    "📍 " + datos.direccion,
   ];
-  if (datos.notas) partes.push("Notas: " + datos.notas);
-  partes.push("(Envío y valor final por confirmar en el chat)");
+  if (datos.notas) partes.push("📝 " + datos.notas);
   return partes.join("\n");
 }
 
@@ -260,34 +286,57 @@ function pintarGaleria() {
         <p class="prod__desc">${esc(p.descripcion)}</p>
         <div class="prod__pie">
           <span class="prod__precio">${pesos(p.precio)}</span>
-          <div class="prod__qty" aria-label="Cantidad de ${esc(p.nombre)}">
-            <button type="button" data-qty="-1" aria-label="Disminuir cantidad de ${esc(p.nombre)}">−</button>
-            <span class="qty-val" aria-live="polite">1</span>
-            <button type="button" data-qty="1" aria-label="Aumentar cantidad de ${esc(p.nombre)}">+</button>
-          </div>
+          <span class="accion" data-id="${esc(p.id)}">
+            <button type="button" class="btn btn--primary btn--agregar agregar" data-agregar="${esc(p.id)}">🛒 Agregar</button>
+          </span>
         </div>
-        <button type="button" class="btn btn--primary btn--agregar" data-agregar="${esc(p.id)}">🛒 Agregar</button>
         <button type="button" class="btn--directo" data-directo="${esc(p.id)}">Pedir solo este →</button>
       </div>
     </article>`).join("");
 
-  gal.querySelectorAll("[data-qty]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const val = b.closest(".prod__qty").querySelector(".qty-val");
-      const n = cantidadValida(parseInt(val.textContent, 10) + parseInt(b.dataset.qty, 10)) || 1;
-      val.textContent = n;
-    });
-  });
   gal.querySelectorAll("[data-agregar]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const cont = b.closest(".prod").querySelector(".qty-val");
-      agregar(b.dataset.agregar, cantidadValida(parseInt(cont.textContent, 10)) || 1);
-      b.textContent = "✓ Agregado";
-      setTimeout(() => { b.textContent = "🛒 Agregar"; }, 1500);
-    });
+    b.addEventListener("click", () => agregar(b.dataset.agregar, 1));
   });
   gal.querySelectorAll("[data-directo]").forEach((b) => {
     b.addEventListener("click", () => pedirDirecto(b.dataset.directo));
+  });
+  pintarAcciones();
+}
+
+/* ---- KZ-MENU-004 · botón de cantidad estilo Brosty Papas ----
+   «🛒 Agregar» muta a [ − ][ cantidad ][ + ] cuando el producto está en el carrito y vuelve
+   a «Agregar» al llegar a cero. No cambia el carrito: solo dibuja su estado. */
+function accionDe(celda) {
+  let stepper = celda.querySelector(".stepper");
+  if (!stepper) {
+    stepper = document.createElement("span");
+    stepper.className = "stepper";
+    stepper.hidden = true;
+    stepper.innerHTML = '<button type="button" data-accion="restar" aria-label="Quitar uno">−</button>' +
+      '<span aria-live="polite">0</span>' +
+      '<button type="button" data-accion="sumar" aria-label="Agregar otro">+</button>';
+    celda.appendChild(stepper);
+    stepper.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-accion]");
+      if (!b) return;
+      const id = celda.dataset.id;
+      if (!id) return;
+      if (b.dataset.accion === "sumar") agregar(id, 1);
+      else cambiarCantidad(id, -1);
+    });
+  }
+  return { agregar: celda.querySelector(".agregar"), stepper };
+}
+
+function pintarAcciones() {
+  document.querySelectorAll("#galeria .accion").forEach((celda) => {
+    const piezas = accionDe(celda);
+    const it = carrito.find((c) => c.id === celda.dataset.id);
+    const cantidad = it ? it.cantidad : 0;
+    if (piezas.agregar) piezas.agregar.hidden = cantidad > 0;
+    piezas.stepper.hidden = cantidad === 0;
+    const numero = piezas.stepper.querySelector("span");
+    if (numero) numero.textContent = String(cantidad);
   });
 }
 
@@ -408,6 +457,7 @@ function pintarCarrito() {
   }
   $("#btn-enviar").disabled = carrito.length === 0;
   pintarEstadoPedido();
+  pintarAcciones();
 }
 
 /* ---- estados del pedido (nunca se afirma una entrega que no consta) ---- */
@@ -713,5 +763,5 @@ if (typeof document !== "undefined") {
 
 /* Exportado solo para las pruebas automatizadas en Node. */
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { validarCatalogo, normalizarProducto, sanearCarrito, calcularTotal, contarProductos, validarFormulario, construirMensaje, urlWhatsApp, precioValido, cantidadValida, MAX_POR_ITEM };
+  module.exports = { validarCatalogo, normalizarProducto, sanearCarrito, calcularTotal, contarProductos, validarFormulario, construirMensaje, urlWhatsApp, precioValido, cantidadValida, codigoDePedido, MAX_POR_ITEM };
 }

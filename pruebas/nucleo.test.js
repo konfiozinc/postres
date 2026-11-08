@@ -149,28 +149,44 @@ test("validarFormulario: el teléfono debe tener entre 10 y 15 dígitos", () => 
 });
 
 /* ---------- mensaje y enlace ---------- */
-test("construirMensaje: incluye líneas, total y datos de contacto", () => {
+/* KZ-MENU-004 · el mensaje usa el formato de factura de los menús: encabezado, código,
+   detalle con subtotales, total en negrita y nota de confirmación. */
+test("construirMensaje: formato de factura con código, subtotales y total en negrita", () => {
   const productos = nucleo.validarCatalogo(DATOS).productos;
   const carrito = [{ id: productos[0].id, cantidad: 2 }, { id: productos[3].id, cantidad: 1 }];
   const datos = { nombre: "Ana", telefono: "3001112233", direccion: "Calle 10 #5-20", notas: "Para las 6 pm" };
-  const msg = nucleo.construirMensaje(datos, carrito, productos, { nombre: "Postres Snoopy" });
+  const msg = nucleo.construirMensaje(datos, carrito, productos, { nombre: "Postres Snoopy" }, "ABCDEFGH2345");
   const total = productos[0].precio * 2 + productos[3].precio;
+  const pesos = (n) => "$" + n.toLocaleString("es-CO");
 
-  assert.ok(msg.includes("Hola, soy Ana"));
-  assert.ok(msg.includes("2× " + productos[0].nombreCompleto));
-  assert.ok(msg.includes("1× " + productos[3].nombreCompleto));
-  assert.ok(msg.includes("Total de productos: " + "$" + total.toLocaleString("es-CO")));
-  assert.ok(msg.includes("Tel: 3001112233"));
-  assert.ok(msg.includes("Dirección: Calle 10 #5-20"));
-  assert.ok(msg.includes("Notas: Para las 6 pm"));
-  assert.ok(/Envío y valor final por confirmar/.test(msg), "el mensaje debe aclarar que el envío se confirma aparte");
+  assert.ok(msg.startsWith("🛍️ *NUEVO PEDIDO EN POSTRES SNOOPY*"), "encabezado con el nombre del negocio");
+  assert.ok(msg.includes("📝 Código: *ABCDEFGH2345*"), "código de consulta en negrita");
+  assert.ok(msg.includes("*DETALLE:*"), "rótulo del detalle");
+  assert.ok(msg.includes("▪️ 2x " + productos[0].nombreCompleto + " — " + pesos(productos[0].precio * 2)), "línea con subtotal");
+  assert.ok(msg.includes("▪️ 1x " + productos[3].nombreCompleto + " — " + pesos(productos[3].precio)), "segunda línea con subtotal");
+  assert.ok(msg.includes("💵 *TOTAL A PAGAR: " + pesos(total) + "*"), "total en negrita");
+  assert.ok(msg.includes("⚠️ _El valor y disponibilidad quedan pendientes de confirmación del negocio._"), "nota de confirmación");
+  assert.ok(msg.includes("Ana") && msg.includes("3001112233") && msg.includes("Calle 10 #5-20"), "datos de entrega");
+  assert.ok(msg.includes("Para las 6 pm"), "notas del cliente");
   assert.ok(!/enviado|recibido|confirmado por el negocio/i.test(msg), "el mensaje no debe afirmar que ya fue enviado");
 });
 
 test("construirMensaje: sin notas no imprime la línea de notas", () => {
   const productos = nucleo.validarCatalogo(DATOS).productos;
-  const msg = nucleo.construirMensaje({ nombre: "Ana", telefono: "3001112233", direccion: "Calle 10 #5-20", notas: "" }, [{ id: productos[0].id, cantidad: 1 }], productos, { nombre: "Postres Snoopy" });
-  assert.ok(!msg.includes("Notas:"));
+  const msg = nucleo.construirMensaje({ nombre: "Ana", telefono: "3001112233", direccion: "Calle 10 #5-20", notas: "" }, [{ id: productos[0].id, cantidad: 1 }], productos, { nombre: "Postres Snoopy" }, "ABCDEFGH2345");
+  assert.ok(!msg.includes("📝 Para las 6 pm"));
+  assert.ok((msg.match(/📝/g) || []).length === 1, "solo el emoji del código, sin notas");
+});
+
+test("codigoDePedido: doce caracteres del alfabeto seguro y renovable", () => {
+  const a = nucleo.codigoDePedido();
+  assert.strictEqual(a.length, 12);
+  assert.match(a, /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/);
+  const b = nucleo.codigoDePedido(true);
+  assert.match(b, /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/);
+  assert.notStrictEqual(a, b, "renovar entrega un código distinto");
+  // En Node no hay sessionStorage: el código se genera en cada llamada. En el navegador se
+  // conserva durante la sesión (lo comprueba la prueba de navegador, no esta).
 });
 
 test("urlWhatsApp: arma el enlace con el texto codificado", () => {

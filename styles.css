@@ -171,7 +171,26 @@ a { color: inherit; }
 }
 .prod__qty button:hover { border-color: var(--rojo); color: var(--rojo-osc); }
 .prod__qty .qty-val { min-width: 28px; text-align: center; font-weight: 700; }
-.prod .btn--agregar { margin-top: 4px; width: 100%; }
+
+/* KZ-MENU-004 · botón de cantidad estilo Brosty Papas (paleta marrón / rosa) */
+.prod__pie .accion { display: inline-flex; align-items: center; gap: 8px; }
+.agregar[hidden], .stepper[hidden] { display: none; }
+.stepper {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--rosa-claro); border-radius: 999px; padding: 2px;
+}
+.stepper button {
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: var(--rojo-osc); color: var(--blanco);
+  font: 800 18px/1 var(--fuente-cuerpo); cursor: pointer;
+  transition: background .15s, transform .12s;
+}
+.stepper button:hover { background: var(--rojo); }
+.stepper button:active { transform: scale(.94); }
+.stepper button:focus-visible { outline: 3px solid var(--marron); outline-offset: 2px; }
+.stepper button[data-accion="restar"] { background: transparent; color: var(--marron); border: 2px solid var(--rosa); }
+.stepper span { min-width: 26px; text-align: center; font-weight: 800; color: var(--marron); font-variant-numeric: tabular-nums; }
+.prod .btn--agregar { margin-top: 0; width: auto; }
 .prod .btn--directo {
   min-height: var(--tap); background: none; border: 0; color: #8a5a2a;
   font-size: 13px; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 10px 4px 2px; width: 100%;

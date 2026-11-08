@@ -110,11 +110,38 @@ function servir() {
 
   await p.evaluate(() => {
     const cards = [...document.querySelectorAll(".prod")];
-    cards[0].querySelector('[data-qty="1"]').click();
-    cards[0].querySelector('[data-qty="1"]').click();   // cantidad 3
-    cards[0].querySelector("[data-agregar]").click();
-    cards[1].querySelector("[data-agregar]").click();
+    cards[0].querySelector("[data-agregar]").click();                       // entra 1
+    const mas = cards[0].querySelector('.stepper [data-accion="sumar"]');
+    mas.click(); mas.click();                                               // cantidad 3
+    cards[1].querySelector("[data-agregar]").click();                       // 1
   });
+
+  /* KZ-MENU-004 · el botón muta a contador y vuelve a «Agregar» al llegar a cero */
+  const stepper = await p.evaluate(() => {
+    const cards = [...document.querySelectorAll(".prod")];
+    const celda = cards[0].querySelector(".accion");
+    return {
+      agregarOculto: cards[0].querySelector(".agregar").hidden,
+      stepperVisible: !celda.querySelector(".stepper").hidden,
+      cantidad: celda.querySelector(".stepper span").textContent.trim(),
+      segundoVisible: !cards[1].querySelector(".accion .stepper").hidden,
+    };
+  });
+  chk("el botón muta a [ − ][ cantidad ][ + ]", stepper.agregarOculto && stepper.stepperVisible, "cantidad " + stepper.cantidad);
+  chk("el contador muestra la cantidad real", stepper.cantidad === "3", stepper.cantidad);
+  chk("solo los productos del carrito muestran contador", stepper.segundoVisible);
+
+  const vuelta = await p.evaluate(() => {
+    const card = [...document.querySelectorAll(".prod")][2];
+    card.querySelector("[data-agregar]").click();                            // entra 1
+    const restar = card.querySelector('.stepper [data-accion="restar"]');
+    restar.click();                                                          // vuelve a 0
+    return {
+      agregarVisible: !card.querySelector(".agregar").hidden,
+      stepperOculto: card.querySelector(".stepper").hidden,
+    };
+  });
+  chk("al llegar a cero vuelve a «🛒 Agregar»", vuelta.agregarVisible && vuelta.stepperOculto);
   await p.click("#cart-float");
   await p.waitForTimeout(500);
   const c1 = await p.evaluate(() => ({
@@ -155,7 +182,7 @@ function servir() {
     href: document.querySelector("#btn-abrir-wa").getAttribute("href"),
   }));
   chk("pasa a «pedido preparado»", c2.listo && !c2.datos);
-  chk("el mensaje lleva el pedido y el total", /Hola, soy Ana/.test(c2.mensaje) && /Total de productos/.test(c2.mensaje) && c2.mensaje.includes("40.000"));
+  chk("el mensaje es la factura con código, subtotales y total", /🛍️ \*NUEVO PEDIDO EN POSTRES SNOOPY\*/.test(c2.mensaje) && /📝 Código: \*[A-Z0-9]{12}\*/.test(c2.mensaje) && /▪️ 3x /.test(c2.mensaje) && /▪️ 1x /.test(c2.mensaje) && /💵 \*TOTAL A PAGAR: \$40\.000\*/.test(c2.mensaje), c2.mensaje.split("\n").slice(0, 2).join(" | "));
   chk("no afirma que el pedido fue enviado", !/enviado|recibido/i.test(c2.estado + " " + c2.mensaje), c2.estado);
   chk("el carrito NO se vació solo", c2.lineas === 2, c2.lineas + " líneas");
   chk("enlace de WhatsApp correcto", /^https:\/\/wa\.me\/573009981576\?text=/.test(c2.href), (c2.href || "").slice(0, 42));
